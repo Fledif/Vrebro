@@ -10,12 +10,24 @@ import models.order
 import models.user
 from routers import admin, catalog, orders
 
+import asyncio
+from bot import bot, dp
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize DB
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    
+    bot_task = None
+    if bot:
+        bot_task = asyncio.create_task(dp.start_polling(bot))
+        print("Telegram Bot started!")
+        
     yield
+    
+    if bot_task:
+        bot_task.cancel()
 
 app = FastAPI(title="VreBRO Unified Backend", lifespan=lifespan)
 
