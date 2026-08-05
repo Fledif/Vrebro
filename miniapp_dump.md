@@ -1,0 +1,1411 @@
+# Code Dump for miniapp
+
+## miniapp_bot.py
+
+```
+import asyncio
+import logging
+from aiogram import Bot, Dispatcher
+from aiogram.filters import CommandStart
+from aiogram.types import Message, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
+
+TOKEN = "8956210585:AAHY5RD4G4CT-u9yXZtc49KcTi0jJJzdQNc"
+WEB_APP_URL = "https://da83769ee01c85.lhr.life"  # localhost.run URL
+
+logging.basicConfig(level=logging.INFO)
+
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+
+@dp.message(CommandStart())
+async def cmd_start(message: Message):
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="🔥 Відкрити меню для замовлення",
+            web_app=WebAppInfo(url=WEB_APP_URL)
+        )]
+    ])
+    await message.answer(
+        "Вітаємо у **VreBRO Mini App**!\nНатисніть кнопку нижче, щоб відкрити преміальне меню 🥩🦐",
+        reply_markup=keyboard,
+        parse_mode="Markdown"
+    )
+
+async def main():
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+```
+
+## backend\main.py
+
+```
+import sys
+import os
+import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+# Add the bot directory to path so we can import its models and DB config
+bot_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../vrebro_bot'))
+sys.path.append(bot_path)
+
+from routes import catalog, orders, favorites, admin
+
+app = FastAPI(title="VreBRO Mini App API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(catalog.router, prefix="/api/catalog", tags=["Catalog"])
+app.include_router(orders.router, prefix="/api/orders", tags=["Orders"])
+app.include_router(favorites.router, prefix="/api/favorites", tags=["Favorites"])
+app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+
+@app.get("/")
+def root():
+    return {"status": "ok", "message": "VreBRO Mini App API is running"}
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+```
+
+## backend\requirements.txt
+
+```
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+aiosqlite
+python-dotenv
+
+```
+
+## backend\schemas.py
+
+```
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import datetime
+
+class CategorySchema(BaseModel):
+    id: int
+    name: str
+    icon: Optional[str] = None
+    sort_order: int
+
+    class Config:
+        from_attributes = True
+
+class ProductSchema(BaseModel):
+    id: int
+    category_id: int
+    name: str
+    description: Optional[str] = None
+    price: float
+    product_type: str
+    photo_id: Optional[str] = None
+    stock_quantity: int
+    views_count: int
+    rating: float
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+        
+class OrderItemCreate(BaseModel):
+    product_id: int
+    quantity: float
+    price_at_purchase: float
+
+class OrderCreate(BaseModel):
+    user_id: int
+    customer_name: str
+    phone: str
+    address: str
+    comment: Optional[str] = ""
+    items: List[OrderItemCreate]
+    total_price: float
+    
+class OrderItemSchema(BaseModel):
+    id: int
+    product_id: int
+    quantity: float
+    price_at_purchase: float
+    product: Optional[ProductSchema] = None
+
+    class Config:
+        from_attributes = True
+
+class OrderSchema(BaseModel):
+    id: int
+    user_id: int
+    order_number: str
+    status: str
+    total_price: float
+    created_at: datetime
+    items: List[OrderItemSchema] = []
+
+    class Config:
+        from_attributes = True
+
+```
+
+## backend\routes\admin.py
+
+```
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from database.engine import get_db
+from app.models.order import Order, OrderItem
+from app.models.product import Product
+from schemas import OrderSchema
+from pydantic import BaseModel
+from typing import List
+
+router = APIRouter()
+
+class OrderItemUpdate(BaseModel):
+    id: int
+    quantity: float
+
+class OrderUpdate(BaseModel):
+    status: str
+    items: List[OrderItemUpdate]
+
+@router.get("/orders", response_model=List[OrderSchema])
+def get_admin_orders(db: Session = Depends(get_db)):
+    orders = db.query(Order).order_by(Order.created_at.desc()).all()
+    return orders
+
+@router.put("/orders/{order_id}", response_model=OrderSchema)
+def update_order(order_id: int, update_data: OrderUpdate, db: Session = Depends(get_db)):
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Update status
+    order.status = update_data.status
+    
+    # Update items weight/quantity and recalculate total
+    new_total = 0
+    for update_item in update_data.items:
+        db_item = db.query(OrderItem).filter(OrderItem.id == update_item.id, OrderItem.order_id == order_id).first()
+        if db_item:
+            db_item.quantity = update_item.quantity
+            new_total += db_item.quantity * db_item.price_at_purchase
+            
+    order.total_price = new_total
+    
+    db.commit()
+    db.refresh(order)
+    return order
+
+```
+
+## backend\routes\catalog.py
+
+```
+from fastapi import APIRouter, Depends, HTTPException
+from typing import List
+from database.engine import async_session_maker
+from app.repositories.product import ProductRepository, CategoryRepository
+from schemas import ProductSchema, CategorySchema
+
+router = APIRouter()
+
+async def get_db():
+    async with async_session_maker() as session:
+        yield session
+
+@router.get("/categories", response_model=List[CategorySchema])
+async def get_categories(db = Depends(get_db)):
+    repo = CategoryRepository(db)
+    categories = await repo.get_all()
+    return categories
+
+@router.get("/products", response_model=List[ProductSchema])
+async def get_products(category_id: int = None, db = Depends(get_db)):
+    repo = ProductRepository(db)
+    if category_id:
+        products = await repo.get_by_category(category_id)
+    else:
+        products = await repo.get_all()
+    return products
+
+@router.get("/products/{product_id}", response_model=ProductSchema)
+async def get_product(product_id: int, db = Depends(get_db)):
+    repo = ProductRepository(db)
+    product = await repo.get_by_id(product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    product.views_count += 1
+    await db.commit()
+    return product
+
+```
+
+## backend\routes\favorites.py
+
+```
+from fastapi import APIRouter, Depends, HTTPException
+from typing import List
+from sqlalchemy.future import select
+from sqlalchemy import delete
+from database.engine import async_session_maker
+from app.models.favorite import Favorite
+from app.models.product import Product
+from schemas import ProductSchema
+from pydantic import BaseModel
+
+router = APIRouter()
+
+async def get_db():
+    async with async_session_maker() as session:
+        yield session
+
+class FavoriteRequest(BaseModel):
+    user_id: int
+    product_id: int
+
+@router.get("/{user_id}", response_model=List[ProductSchema])
+async def get_favorites(user_id: int, db = Depends(get_db)):
+    stmt = select(Product).join(Favorite, Favorite.product_id == Product.id).where(Favorite.user_id == user_id)
+    result = await db.execute(stmt)
+    products = result.scalars().all()
+    return products
+
+@router.post("/")
+async def add_favorite(req: FavoriteRequest, db = Depends(get_db)):
+    stmt = select(Favorite).where(Favorite.user_id == req.user_id, Favorite.product_id == req.product_id)
+    result = await db.execute(stmt)
+    if result.scalars().first():
+        return {"status": "already added"}
+        
+    fav = Favorite(user_id=req.user_id, product_id=req.product_id)
+    db.add(fav)
+    await db.commit()
+    return {"status": "added"}
+
+@router.delete("/")
+async def remove_favorite(req: FavoriteRequest, db = Depends(get_db)):
+    stmt = delete(Favorite).where(Favorite.user_id == req.user_id, Favorite.product_id == req.product_id)
+    await db.execute(stmt)
+    await db.commit()
+    return {"status": "removed"}
+
+```
+
+## backend\routes\orders.py
+
+```
+from fastapi import APIRouter, Depends, HTTPException
+from typing import List
+from database.engine import async_session_maker
+from app.repositories.order import OrderRepository
+from app.models.order import Order, OrderItem
+from schemas import OrderCreate, OrderSchema
+import datetime
+
+router = APIRouter()
+
+async def get_db():
+    async with async_session_maker() as session:
+        yield session
+
+@router.post("/", response_model=OrderSchema)
+async def create_order(order_data: OrderCreate, db = Depends(get_db)):
+    repo = OrderRepository(db)
+    
+    order = Order(
+        user_id=order_data.user_id,
+        order_number=f"M-{int(datetime.datetime.now().timestamp())}",
+        status="NEW",
+        total_price=order_data.total_price
+    )
+    
+    db.add(order)
+    await db.commit()
+    await db.refresh(order)
+    
+    for item in order_data.items:
+        db_item = OrderItem(
+            order_id=order.id,
+            product_id=item.product_id,
+            quantity=item.quantity,
+            price_at_purchase=item.price_at_purchase
+        )
+        db.add(db_item)
+    
+    await db.commit()
+    await db.refresh(order)
+    
+    return order
+
+@router.get("/{user_id}", response_model=List[OrderSchema])
+async def get_user_orders(user_id: int, db = Depends(get_db)):
+    repo = OrderRepository(db)
+    # the existing repo might not have get_by_user_id with eager loading items
+    # let's just use existing or query directly
+    orders = await repo.get_user_orders(user_id)
+    return orders
+
+```
+
+## backend\routes\__init__.py
+
+```
+# init
+
+```
+
+## frontend\.gitignore
+
+```
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+```
+
+## frontend\.oxlintrc.json
+
+```
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  }
+}
+
+```
+
+## frontend\index.html
+
+```
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>frontend</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
+```
+
+## frontend\package.json
+
+```
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@twa-dev/sdk": "^8.0.2",
+    "autoprefixer": "^10.5.4",
+    "axios": "^1.19.0",
+    "clsx": "^2.1.1",
+    "framer-motion": "^13.0.0",
+    "lucide-react": "^1.28.0",
+    "postcss": "^8.5.25",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.2",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4.3.3",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "oxlint": "^1.75.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.0"
+  }
+}
+
+```
+
+## frontend\postcss.config.js
+
+```
+export default {
+  plugins: {
+    '@tailwindcss/postcss': {},
+    autoprefixer: {},
+  },
+}
+
+```
+
+## frontend\README.md
+
+```
+# React + TypeScript + Vite
+
+This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+
+Currently, two official plugins are available:
+
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+
+## React Compiler
+
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+
+## Expanding the Oxlint configuration
+
+If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+
+```json
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  }
+}
+```
+
+See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+```
+
+## frontend\tailwind.config.js
+
+```
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        'brand-orange': '#F97316',
+        'brand-red': '#DC2626',
+        'brand-dark': '#111111',
+        'brand-gray': '#222222',
+      },
+    },
+  },
+  plugins: [],
+}
+
+```
+
+## frontend\tsconfig.app.json
+
+```
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "types": ["vite/client"],
+    "allowArbitraryExtensions": true,
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}
+
+```
+
+## frontend\tsconfig.json
+
+```
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}
+
+```
+
+## frontend\tsconfig.node.json
+
+```
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "module": "nodenext",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["vite.config.ts"]
+}
+
+```
+
+## frontend\vite.config.ts
+
+```
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    allowedHosts: true
+  },
+  preview: {
+    allowedHosts: true,
+    port: 5173
+  }
+})
+
+```
+
+## frontend\src\App.css
+
+```
+.counter {
+  font-size: 16px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+  margin-bottom: 24px;
+
+  &:hover {
+    border-color: var(--accent-border);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.hero {
+  position: relative;
+
+  .base,
+  .framework,
+  .vite {
+    inset-inline: 0;
+    margin: 0 auto;
+  }
+
+  .base {
+    width: 170px;
+    position: relative;
+    z-index: 0;
+  }
+
+  .framework,
+  .vite {
+    position: absolute;
+  }
+
+  .framework {
+    z-index: 1;
+    top: 34px;
+    height: 28px;
+    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
+      scale(1.4);
+  }
+
+  .vite {
+    z-index: 0;
+    top: 107px;
+    height: 26px;
+    width: auto;
+    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
+      scale(0.8);
+  }
+}
+
+#center {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  place-content: center;
+  place-items: center;
+  flex-grow: 1;
+
+  @media (max-width: 1024px) {
+    padding: 32px 20px 24px;
+    gap: 18px;
+  }
+}
+
+#next-steps {
+  display: flex;
+  border-top: 1px solid var(--border);
+  text-align: left;
+
+  & > div {
+    flex: 1 1 0;
+    padding: 32px;
+    @media (max-width: 1024px) {
+      padding: 24px 20px;
+    }
+  }
+
+  .icon {
+    margin-bottom: 16px;
+    width: 22px;
+    height: 22px;
+  }
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+#docs {
+  border-right: 1px solid var(--border);
+
+  @media (max-width: 1024px) {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+#next-steps ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+  margin: 32px 0 0;
+
+  .logo {
+    height: 18px;
+  }
+
+  a {
+    color: var(--text-h);
+    font-size: 16px;
+    border-radius: 6px;
+    background: var(--social-bg);
+    display: flex;
+    padding: 6px 12px;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: box-shadow 0.3s;
+
+    &:hover {
+      box-shadow: var(--shadow);
+    }
+    .button-icon {
+      height: 18px;
+      width: 18px;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+
+    li {
+      flex: 1 1 calc(50% - 8px);
+    }
+
+    a {
+      width: 100%;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+  }
+}
+
+#spacer {
+  height: 88px;
+  border-top: 1px solid var(--border);
+  @media (max-width: 1024px) {
+    height: 48px;
+  }
+}
+
+.ticks {
+  position: relative;
+  width: 100%;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: -4.5px;
+    border: 5px solid transparent;
+  }
+
+  &::before {
+    left: 0;
+    border-left-color: var(--border);
+  }
+  &::after {
+    right: 0;
+    border-right-color: var(--border);
+  }
+}
+
+```
+
+## frontend\src\App.tsx
+
+```
+import { useEffect } from 'react';
+import WebApp from '@twa-dev/sdk';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import Home from './pages/Home';
+import Catalog from './pages/Catalog';
+import Cart from './pages/Cart';
+import Orders from './pages/Orders';
+import Profile from './pages/Profile';
+import ProductDetail from './pages/ProductDetail';
+import Favorites from './pages/Favorites';
+import { Home as HomeIcon, LayoutGrid, ShoppingCart, User, Heart } from 'lucide-react';
+import clsx from 'clsx';
+import SplashScreen from './components/SplashScreen';
+
+function Navigation() {
+  const location = useLocation();
+  const isActive = (path: string) => location.pathname === path;
+
+  return (
+    <nav className="fixed bottom-0 left-0 w-full bg-brand-gray border-t border-gray-800 flex justify-around items-center h-16 z-50">
+      <Link to="/" className={clsx("flex flex-col items-center transition-colors", isActive('/') ? "text-brand-orange" : "text-gray-400 hover:text-brand-orange")}>
+        <HomeIcon size={20} />
+        <span className="text-[10px] mt-1">Головна</span>
+      </Link>
+      <Link to="/catalog" className={clsx("flex flex-col items-center transition-colors", isActive('/catalog') ? "text-brand-orange" : "text-gray-400 hover:text-brand-orange")}>
+        <LayoutGrid size={20} />
+        <span className="text-[10px] mt-1">Каталог</span>
+      </Link>
+      <Link to="/cart" className={clsx("flex flex-col items-center transition-colors relative", isActive('/cart') ? "text-brand-orange" : "text-gray-400 hover:text-brand-orange")}>
+        <ShoppingCart size={20} />
+        <span className="text-[10px] mt-1">Кошик</span>
+      </Link>
+      <Link to="/favorites" className={clsx("flex flex-col items-center transition-colors", isActive('/favorites') ? "text-brand-orange" : "text-gray-400 hover:text-brand-orange")}>
+        <Heart size={20} />
+        <span className="text-[10px] mt-1">Обране</span>
+      </Link>
+      <Link to="/profile" className={clsx("flex flex-col items-center transition-colors", isActive('/profile') ? "text-brand-orange" : "text-gray-400 hover:text-brand-orange")}>
+        <User size={20} />
+        <span className="text-[10px] mt-1">Профіль</span>
+      </Link>
+    </nav>
+  );
+}
+
+function App() {
+  useEffect(() => {
+    try {
+      if (WebApp && typeof WebApp.ready === 'function') {
+        WebApp.ready();
+        WebApp.expand();
+      }
+    } catch (e) {
+      console.warn("Not inside Telegram Web App");
+    }
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <div className="flex flex-col min-h-screen bg-brand-dark text-white pb-16 font-sans relative">
+        <SplashScreen />
+        <main className="flex-grow overflow-x-hidden">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/catalog" element={<Catalog />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/favorites" element={<Favorites />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/profile" element={<Profile />} />
+          </Routes>
+        </main>
+        <Navigation />
+      </div>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
+```
+
+## frontend\src\index.css
+
+```
+@import "tailwindcss";
+
+@theme {
+  --color-brand-orange: #F97316;
+  --color-brand-red: #DC2626;
+  --color-brand-dark: #111111;
+  --color-brand-gray: #222222;
+}
+body {
+  background-color: #111111;
+  color: white;
+}
+
+```
+
+## frontend\src\main.tsx
+
+```
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App'
+import './index.css'
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)
+
+```
+
+## frontend\src\components\ProductCard.tsx
+
+```
+import React from 'react';
+import { Link } from 'react-router-dom';
+
+export interface Product {
+  id: number;
+  category_id: number;
+  name: string;
+  description: string;
+  price: number;
+  is_weighted: boolean;
+  weight_step: number | null;
+  photo_file_id: string | null;
+  is_active: boolean;
+  views_count: number;
+  rating: number;
+}
+
+interface ProductCardProps {
+  product: Product;
+}
+
+export default function ProductCard({ product }: ProductCardProps) {
+  // We'll use a placeholder image if there's no real photo
+  const imageUrl = product.photo_file_id 
+    ? `https://via.placeholder.com/400x300/1F2937/FFFFFF?text=${encodeURIComponent(product.name)}`
+    : `https://images.unsplash.com/photo-1544025162-8311ebc00a94?q=80&w=400&auto=format&fit=crop`;
+
+  return (
+    <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl overflow-hidden shadow-lg border border-gray-700/50 relative group">
+      <Link to={`/product/${product.id}`} className="block relative">
+        <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition duration-300 z-10" />
+        <img 
+          src={imageUrl} 
+          alt={product.name} 
+          className="w-full h-40 object-cover"
+        />
+        <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-semibold text-orange-400 z-20 border border-orange-500/20">
+          ⭐ {product.rating.toFixed(1)}
+        </div>
+      </Link>
+      
+      <div className="p-4">
+        <Link to={`/product/${product.id}`}>
+          <h3 className="text-lg font-bold text-white mb-1 leading-tight line-clamp-1">{product.name}</h3>
+        </Link>
+        <p className="text-sm text-gray-400 line-clamp-2 mb-3 h-10">
+          {product.description}
+        </p>
+        
+        <div className="flex items-center justify-between mt-auto">
+          <div>
+            <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
+              {product.price.toLocaleString('uk-UA')}
+            </span>
+            <span className="text-xs text-gray-400 ml-1">
+              грн {product.is_weighted ? '/ 100г' : ''}
+            </span>
+          </div>
+          <button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white rounded-xl w-10 h-10 flex items-center justify-center shadow-lg shadow-orange-500/30 transition-all active:scale-95">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+```
+
+## frontend\src\components\SplashScreen.tsx
+
+```
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+export default function SplashScreen() {
+  const [loading, setLoading] = useState(true);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    // Simulate loading progress
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setTimeout(() => setLoading(false), 400); // Wait a bit after reaching 100%
+          return 100;
+        }
+        return prev + Math.floor(Math.random() * 15) + 5;
+      });
+    }, 150);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <AnimatePresence>
+      {loading && (
+        <motion.div
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-end pb-24 bg-brand-dark"
+          style={{
+            backgroundImage: "linear-gradient(to top, rgba(17,17,17,1) 0%, rgba(17,17,17,0.3) 50%, rgba(17,17,17,0.8) 100%), url('/splash-bg.png')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          {/* Logo Text overlay since we didn't use text in the image */}
+          <div className="absolute top-1/4 flex flex-col items-center">
+            <motion.h1 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="text-6xl font-black italic tracking-tighter text-white drop-shadow-[0_0_15px_rgba(249,115,22,0.8)] uppercase"
+              style={{ fontFamily: 'Impact, sans-serif' }}
+            >
+              В <span className="text-brand-orange">РеБРО</span>
+            </motion.h1>
+            <p className="text-gray-300 tracking-widest mt-2 uppercase text-sm font-semibold">Grill House & BBQ</p>
+          </div>
+
+          {/* Loading Bar */}
+          <div className="w-3/4 max-w-sm mt-auto relative">
+            <div className="flex justify-between text-xs text-brand-orange mb-2 font-bold uppercase tracking-wider">
+              <span>Завантаження...</span>
+              <span>{Math.min(progress, 100)}%</span>
+            </div>
+            <div className="h-2 w-full bg-gray-900 rounded-full overflow-hidden border border-gray-800">
+              <motion.div
+                className="h-full bg-gradient-to-r from-brand-red to-brand-orange relative"
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ ease: "linear", duration: 0.2 }}
+              >
+                {/* Shine effect on the loading bar */}
+                <div className="absolute top-0 left-0 bottom-0 w-full bg-white opacity-20" style={{
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                  animation: 'shimmer 1.5s infinite'
+                }} />
+              </motion.div>
+            </div>
+          </div>
+          
+          <style dangerouslySetInnerHTML={{__html: `
+            @keyframes shimmer {
+              0% { transform: translateX(-100%); }
+              100% { transform: translateX(100%); }
+            }
+          `}} />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+```
+
+## frontend\src\pages\Cart.tsx
+
+```
+import React from 'react';
+
+export default function Cart() {
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">🧺 Кошик</h1>
+      <p className="text-gray-400">Ваш кошик порожній.</p>
+    </div>
+  );
+}
+
+```
+
+## frontend\src\pages\Catalog.tsx
+
+```
+import React, { useState } from 'react';
+import ProductCard, { type Product } from '../components/ProductCard';
+
+const MOCK_CATEGORIES = [
+  { id: 1, name: '🔥 М\'ясо та Ребра' },
+  { id: 2, name: '🦐 Морепродукти' },
+  { id: 3, name: '🍲 Супи' },
+  { id: 4, name: '🍺 Напої' },
+];
+
+const MOCK_PRODUCTS: Product[] = [
+  {
+    id: 1, category_id: 1, name: 'Фірмові реберця BBQ', description: 'Томлені реберця у фірмовому соусі BBQ з димком. Тануть у роті!',
+    price: 95, is_weighted: true, weight_step: 100, photo_file_id: 'mock', is_active: true, views_count: 1420, rating: 4.9
+  },
+  {
+    id: 2, category_id: 2, name: 'Мідії у вершковому соусі', description: 'Величезна порція чорноморських мідій у ніжному вершково-сирному соусі з часником.',
+    price: 320, is_weighted: false, weight_step: null, photo_file_id: 'mock', is_active: true, views_count: 850, rating: 4.7
+  },
+  {
+    id: 3, category_id: 1, name: 'Стейк Рибай', description: 'Преміальний стейк з мармурової яловичини, просмаження Medium.',
+    price: 180, is_weighted: true, weight_step: 100, photo_file_id: 'mock', is_active: true, views_count: 1100, rating: 4.8
+  },
+  {
+    id: 4, category_id: 3, name: 'Гострий Том Ям', description: 'Автентичний тайський суп з тигровими креветками та кокосовим молоком.',
+    price: 240, is_weighted: false, weight_step: null, photo_file_id: null, is_active: true, views_count: 670, rating: 4.5
+  },
+];
+
+export default function Catalog() {
+  const [activeCategory, setActiveCategory] = useState<number>(1);
+
+  const filteredProducts = MOCK_PRODUCTS.filter(p => p.category_id === activeCategory);
+
+  return (
+    <div className="pb-24 pt-4 px-4 min-h-screen bg-black">
+      <div className="flex justify-between items-end mb-6">
+        <div>
+          <h1 className="text-3xl font-black text-white leading-none">Меню</h1>
+          <p className="text-gray-400 text-sm mt-1">Оберіть найсмачніше</p>
+        </div>
+      </div>
+
+      {/* Categories Horizontal Scroll */}
+      <div className="flex overflow-x-auto hide-scrollbar gap-3 mb-6 pb-2 -mx-4 px-4">
+        {MOCK_CATEGORIES.map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id)}
+            className={`whitespace-nowrap px-4 py-2 rounded-2xl text-sm font-semibold transition-all ${
+              activeCategory === cat.id 
+                ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg shadow-orange-500/30' 
+                : 'bg-gray-800/80 text-gray-400 hover:text-white border border-gray-700/50'
+            }`}
+          >
+            {cat.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Products Grid */}
+      <div className="grid grid-cols-2 gap-4">
+        {filteredProducts.map(product => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+        {filteredProducts.length === 0 && (
+          <div className="col-span-2 py-10 text-center text-gray-500">
+            У цій категорії поки немає товарів.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+```
+
+## frontend\src\pages\Favorites.tsx
+
+```
+import React from 'react';
+
+export default function Favorites() {
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">❤️ Обране</h1>
+      <p className="text-gray-400">Тут будуть ваші улюблені товари.</p>
+    </div>
+  );
+}
+
+```
+
+## frontend\src\pages\Home.tsx
+
+```
+import React from 'react';
+
+export default function Home() {
+  return (
+    <div className="p-4">
+      <div className="text-center mb-8 mt-10">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-brand-orange to-brand-red text-transparent bg-clip-text">
+          VreBRO
+        </h1>
+        <p className="text-gray-400 mt-2">Свіжі продукти. Швидке замовлення. Якісний сервіс.</p>
+        <button className="mt-6 bg-gradient-to-r from-brand-orange to-brand-red text-white px-6 py-3 rounded-full font-bold shadow-lg shadow-brand-red/20 transition-transform active:scale-95">
+          🛍 Перейти до каталогу
+        </button>
+      </div>
+      
+      <div className="mt-10">
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+          🔥 Популярне
+        </h2>
+        <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+          {/* Skeletons for now */}
+          {[1,2,3].map(i => (
+            <div key={i} className="min-w-[150px] bg-brand-gray p-3 rounded-2xl snap-center animate-pulse">
+              <div className="h-[100px] bg-gray-700 rounded-xl mb-3"></div>
+              <div className="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
+              <div className="h-4 bg-gray-700 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+```
+
+## frontend\src\pages\Orders.tsx
+
+```
+import React from 'react';
+
+export default function Orders() {
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">📦 Замовлення</h1>
+      <p className="text-gray-400">У вас ще немає замовлень.</p>
+    </div>
+  );
+}
+
+```
+
+## frontend\src\pages\ProductDetail.tsx
+
+```
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+
+const MOCK_PRODUCT = {
+  id: 1, category_id: 1, name: 'Фірмові реберця BBQ', description: 'Томлені реберця у фірмовому соусі BBQ з димком. Тануть у роті! Готуються за авторським рецептом шеф-кухаря протягом 8 годин. Ідеально підходять до крафтового пива.',
+  price: 95, is_weighted: true, weight_step: 100, photo_file_id: 'mock', is_active: true, views_count: 1420, rating: 4.9,
+  ingredients: 'Свинячі ребра, соус BBQ, спеції, часник, мед',
+  weight_info: 'Вага однієї порції зазвичай 300-400г'
+};
+
+export default function ProductDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [weight, setWeight] = useState<number>(300);
+
+  const product = MOCK_PRODUCT; // In reality, fetch by id
+  
+  const imageUrl = product.photo_file_id 
+    ? `https://via.placeholder.com/600x600/1F2937/FFFFFF?text=${encodeURIComponent(product.name)}`
+    : `https://images.unsplash.com/photo-1544025162-8311ebc00a94?q=80&w=600&auto=format&fit=crop`;
+
+  return (
+    <div className="min-h-screen bg-black text-white pb-24">
+      {/* Header with Back Button */}
+      <div className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center p-4 bg-gradient-to-b from-black/80 to-transparent">
+        <button 
+          onClick={() => navigate(-1)}
+          className="bg-black/50 backdrop-blur-md p-2 rounded-full border border-gray-700/50"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <button className="bg-black/50 backdrop-blur-md p-2 rounded-full border border-gray-700/50 text-gray-300">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Product Image */}
+      <div className="relative h-80 w-full">
+        <img src={imageUrl} alt={product.name} className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+      </div>
+
+      {/* Product Info */}
+      <div className="px-4 -mt-10 relative z-10">
+        <div className="flex justify-between items-end mb-2">
+          <div className="bg-orange-500/20 border border-orange-500/50 text-orange-400 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 backdrop-blur-sm w-max">
+            ⭐ {product.rating} <span className="text-gray-400 font-normal ml-1">({product.views_count} відгуків)</span>
+          </div>
+        </div>
+        
+        <h1 className="text-3xl font-black mb-2">{product.name}</h1>
+        
+        <div className="flex items-end gap-2 mb-6">
+          <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
+            {product.price.toLocaleString('uk-UA')}
+          </span>
+          <span className="text-gray-400 mb-1">
+            грн {product.is_weighted ? `/ ${product.weight_step}г` : ''}
+          </span>
+        </div>
+
+        <div className="bg-gray-900 rounded-2xl p-4 mb-6 border border-gray-800">
+          <h3 className="font-bold text-gray-300 mb-2">Опис</h3>
+          <p className="text-gray-400 text-sm leading-relaxed">
+            {product.description}
+          </p>
+          <div className="mt-4 pt-4 border-t border-gray-800">
+             <h3 className="font-bold text-gray-300 mb-2">Склад</h3>
+             <p className="text-gray-400 text-sm">{product.ingredients}</p>
+          </div>
+        </div>
+
+        {/* Add to Cart Section */}
+        <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800">
+          {product.is_weighted ? (
+            <div className="mb-4">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-gray-400">Оберіть вагу</span>
+                <span className="font-bold text-orange-400">{weight} г</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => setWeight(Math.max(100, weight - 100))}
+                  className="bg-gray-800 w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-bold active:scale-95 transition-transform"
+                >-</button>
+                <div className="flex-1 text-center text-xl font-bold">{weight}г</div>
+                <button 
+                  onClick={() => setWeight(weight + 100)}
+                  className="bg-gray-800 w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-bold active:scale-95 transition-transform"
+                >+</button>
+              </div>
+            </div>
+          ) : null}
+
+          <button className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/25 active:scale-[0.98] transition-transform">
+            {product.is_weighted ? `Додати в кошик • ${(product.price * weight / 100).toLocaleString('uk-UA')} грн` : 'Додати в кошик'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+```
+
+## frontend\src\pages\Profile.tsx
+
+```
+import React from 'react';
+
+export default function Profile() {
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">👤 Профіль</h1>
+      <p className="text-gray-400">В розробці...</p>
+    </div>
+  );
+}
+
+```
+

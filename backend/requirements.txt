@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+sqlalchemy
+asyncpg
+aiosqlite
+pydantic
+python-dotenv
+python-multipart
+aiohttp
+aiogram
+greenlet
+httpx
