@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import WebApp from '@twa-dev/sdk';
 import { fetchUserOrders, fetchPaymentCard } from '../api';
-import { Package, CreditCard, CheckCircle2 } from 'lucide-react';
+import { Package, CreditCard, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const statusLabels: Record<string, string> = {
@@ -123,7 +123,7 @@ export default function MyOrders() {
               
               {order.status === 'CONFIRMED' && (
                 <div className="mt-4 bg-green-500/10 p-3 rounded-xl border border-green-500/30 flex items-center justify-center gap-2 text-green-500">
-                  <CheckCircle2 size={16} />
+                  <Check size={16} />
                   <span className="text-xs font-bold">Оплачено та завершено</span>
                 </div>
               )}

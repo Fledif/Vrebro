@@ -100,6 +100,9 @@ async def serve_miniapp(full_path: str = ""):
     file_path = os.path.join(miniapp_path, full_path)
     if os.path.exists(file_path) and os.path.isfile(file_path):
         return FileResponse(file_path)
+        
+    if full_path.endswith(".js") or full_path.endswith(".css"):
+        raise HTTPException(status_code=404, detail="Asset not found")
     
     index_path = os.path.join(miniapp_path, "index.html")
     if os.path.exists(index_path):
@@ -111,6 +114,9 @@ async def serve_miniapp(full_path: str = ""):
 async def serve_admin(full_path: str):
     if full_path.startswith("api/"):
         raise HTTPException(status_code=404, detail="API route not found")
+        
+    if full_path.endswith(".js") or full_path.endswith(".css"):
+        raise HTTPException(status_code=404, detail="Asset not found")
     
     file_path = os.path.join(admin_path, full_path)
     if os.path.exists(file_path) and os.path.isfile(file_path):
