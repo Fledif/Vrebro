@@ -16,8 +16,28 @@ from routers import admin, catalog, orders, ai
 import asyncio
 from bot import bot, dp
 
+import sqlite3
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Auto-migrate database for Render's persistent disk
+    try:
+        with sqlite3.connect("vrebro.db") as conn:
+            conn.execute("ALTER TABLE orders ADD COLUMN delivery_cost FLOAT DEFAULT 0.0")
+    except Exception as e:
+        print(f"Migration: {e}") # Expected if column already exists
+
+    try:
+        with sqlite3.connect("vrebro.db") as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS store_settings (
+                    key VARCHAR PRIMARY KEY,
+                    value VARCHAR NOT NULL
+                )
+            """)
+    except Exception as e:
+        print(f"Migration: {e}")
+
     # Initialize DB
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
