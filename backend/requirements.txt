@@ -11,4 +11,4 @@ aiogram
 greenlet
 httpx
 PyJWT
-passlib[bcrypt]
+bcrypt
