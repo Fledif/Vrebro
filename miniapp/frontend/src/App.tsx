@@ -53,7 +53,7 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/miniapp">
       <div className="flex flex-col min-h-screen bg-brand-dark text-white pb-16 font-sans relative">
         <LoadingScreen />
         <main className="flex-grow overflow-x-hidden">
