@@ -19,15 +19,8 @@ from bot import bot, dp
 import sqlite3
 import httpx
 
-async def run_bot():
-    if not bot: return
-    while True:
-        try:
-            await bot.delete_webhook(drop_pending_updates=True)
-            await dp.start_polling(bot)
-        except Exception as e:
-            print(f"Bot polling error: {e}")
-            await asyncio.sleep(5)
+from aiogram.types import Update
+from fastapi import Request
 
 async def keep_awake():
     """Background task to ping the server every 3 minutes to keep it awake on Render."""
@@ -72,17 +65,22 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     
-    bot_task = None
     if bot:
-        bot_task = asyncio.create_task(run_bot())
-        print("Telegram Bot started with resilient polling!")
+        render_url = os.getenv("RENDER_EXTERNAL_URL")
+        web_app_url = os.getenv("WEB_APP_URL", "").replace("/miniapp", "")
+        base_url = render_url if render_url else web_app_url
+        if base_url:
+            webhook_url = f"{base_url}/api/webhook"
+            await bot.set_webhook(webhook_url, drop_pending_updates=True)
+            print(f"Telegram Bot webhook set to {webhook_url}!")
+        else:
+            print("Telegram Bot webhook NOT SET: RENDER_EXTERNAL_URL or WEB_APP_URL missing.")
         
     keep_awake_task = asyncio.create_task(keep_awake())
         
     yield
     
-    if bot_task:
-        bot_task.cancel()
+
     if keep_awake_task:
         keep_awake_task.cancel()
 
@@ -100,6 +98,18 @@ app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(ai.router, prefix="/api/admin/ai", tags=["ai"])
 app.include_router(catalog.router, prefix="/api/catalog", tags=["catalog"])
 app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
+
+@app.post("/api/webhook")
+async def telegram_webhook(request: Request):
+    if not bot:
+        return {"status": "bot_not_configured"}
+    try:
+        update_data = await request.json()
+        update = Update.model_validate(update_data, context={"bot": bot})
+        await dp.feed_update(bot, update)
+    except Exception as e:
+        print(f"Webhook processing error: {e}")
+    return {"status": "ok"}
 
 admin_path = os.path.join(os.path.dirname(__file__), "..", "admin-panel", "dist")
 miniapp_path = os.path.join(os.path.dirname(__file__), "..", "miniapp", "frontend", "dist")
