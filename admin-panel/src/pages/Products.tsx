@@ -85,7 +85,8 @@ export default function Products() {
 
     const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
     if (!apiKey) {
-      alert("Не налаштовано VITE_IMGBB_API_KEY у файлі .env (або .env.local)");
+      alert("Ключ ImgBB не знайдено. Використовуємо картинку-заглушку для тестування!");
+      setFormData(prev => ({...prev, image_url: "https://via.placeholder.com/300x300.png?text=No+Image"}));
       return;
     }
 
