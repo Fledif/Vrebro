@@ -71,7 +71,9 @@ export default function Checkout() {
       if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
         setError("Не вдалося завантажити дані. Сервер не відповідає. Спробуйте ще раз.");
       } else {
-        setError("Сталася помилка при створенні замовлення. Спробуйте пізніше.");
+        const detail = err.response?.data?.detail;
+        const msg = Array.isArray(detail) ? detail.map((d: any) => d.msg).join(', ') : (detail || err.message);
+        setError(`Помилка: ${msg}`);
       }
     } finally {
       setLoading(false);

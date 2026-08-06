@@ -24,9 +24,9 @@ class ProductBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=150)
     description: Optional[str] = Field(default=None, max_length=1000)
     price: float = Field(..., gt=0)
-    image_url: str = Field(..., min_length=1, max_length=255)
-    is_active: bool = True
-    is_promo: bool = False
+    image_url: Optional[str] = Field(default=None, max_length=255)
+    is_active: Optional[bool] = True
+    is_promo: Optional[bool] = False
     promo_price: Optional[float] = Field(default=None, gt=0)
 
 class ProductCreate(ProductBase):
@@ -37,7 +37,7 @@ class ProductUpdate(ProductBase):
 
 class ProductSchema(ProductBase):
     id: int
-    created_at: datetime
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
