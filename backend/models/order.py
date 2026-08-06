@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, BigInteger
 from sqlalchemy.orm import relationship
 import datetime
 from .base import Base
@@ -7,7 +7,7 @@ class Order(Base):
     __tablename__ = 'orders'
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('users.telegram_id'), nullable=True)
+    user_id = Column(BigInteger, ForeignKey('users.telegram_id'), nullable=True)
     order_number = Column(String, unique=True, index=True)
     status = Column(String, default="NEW") # NEW, ACCEPTED, COOKING, READY, DELIVERING, COMPLETED, CANCELLED
     total_price = Column(Float, nullable=False)
