@@ -25,7 +25,8 @@ class OrderItem(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     order_id = Column(Integer, ForeignKey('orders.id'))
-    product_id = Column(Integer, ForeignKey('products.id'))
+    product_id = Column(Integer, ForeignKey('products.id'), nullable=True)
+    product_name = Column(String, nullable=True)
     quantity = Column(Float, nullable=False)
     price_at_purchase = Column(Float, nullable=False)
     

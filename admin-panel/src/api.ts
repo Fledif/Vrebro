@@ -2,7 +2,8 @@ import axios from 'axios';
 
 export interface OrderItem {
   id: number;
-  product: { name: string; image_url: string };
+  product_name?: string;
+  product: { name: string; image_url: string } | null;
   quantity: number;
   price_at_purchase: number;
 }

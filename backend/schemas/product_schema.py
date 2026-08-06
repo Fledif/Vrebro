@@ -28,6 +28,8 @@ class ProductBase(BaseModel):
     is_active: Optional[bool] = True
     is_promo: Optional[bool] = False
     promo_price: Optional[float] = Field(default=None, gt=0)
+    is_weighted: Optional[bool] = False
+    weight_step: Optional[int] = None
 
 class ProductCreate(ProductBase):
     pass

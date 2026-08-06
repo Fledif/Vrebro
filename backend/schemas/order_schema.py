@@ -5,7 +5,7 @@ from .product_schema import ProductSchema
 
 class OrderItemCreate(BaseModel):
     product_id: int
-    quantity: float
+    quantity: float = Field(..., gt=0)
 
 class OrderCreate(BaseModel):
     user_id: int
@@ -22,6 +22,7 @@ class OrderStatusUpdate(BaseModel):
 class OrderItemSchema(BaseModel):
     id: int
     product_id: Optional[int] = None
+    product_name: Optional[str] = None
     quantity: float
     price_at_purchase: float
     product: Optional[ProductSchema] = None

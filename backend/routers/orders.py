@@ -31,15 +31,25 @@ async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_d
         actual_price = product.promo_price if product.is_promo and product.promo_price is not None else product.price
         validated_items.append({
             "product_id": item.product_id,
+            "product_name": product.name,
             "quantity": item.quantity,
             "price_at_purchase": actual_price
         })
         total_price += actual_price * item.quantity
 
+    from models.user import User
+    
+    # Upsert user
+    user = await db.get(User, order_data.user_id)
+    if not user:
+        user = User(telegram_id=order_data.user_id, first_name=order_data.customer_name)
+        db.add(user)
+        await db.flush()
+        
     order_number = f"ORD-{uuid.uuid4().hex[:8].upper()}"
     
     new_order = Order(
-        user_id=None, # Bypass ForeignKey constraint
+        user_id=order_data.user_id,
         order_number=order_number,
         total_price=total_price,
         customer_name=order_data.customer_name,
@@ -55,6 +65,7 @@ async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_d
         new_item = OrderItem(
             order_id=new_order.id,
             product_id=item_data["product_id"],
+            product_name=item_data["product_name"],
             quantity=item_data["quantity"],
             price_at_purchase=item_data["price_at_purchase"]
         )
@@ -67,7 +78,7 @@ async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_d
     
     if bot and settings.ADMIN_CHAT_ID:
         try:
-            items_text = "\n".join([f"- Товар #{i['product_id']} x{i['quantity']} ({i['price_at_purchase']} грн)" for i in validated_items])
+            items_text = "\n".join([f"- {i['product_name']} x{i['quantity']} ({i['price_at_purchase']} грн)" for i in validated_items])
             msg = f"🚨 **НОВЕ ЗАМОВЛЕННЯ {new_order.order_number}**\n\n" \
                   f"👤 Ім'я: {new_order.customer_name}\n" \
                   f"📞 Тел: {new_order.phone}\n" \

@@ -25,6 +25,8 @@ class Product(Base):
     is_active = Column(Boolean, default=True)
     is_promo = Column(Boolean, default=False)
     promo_price = Column(Float, nullable=True)
+    is_weighted = Column(Boolean, default=False)
+    weight_step = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     category = relationship("Category", back_populates="products")

@@ -19,6 +19,16 @@ from bot import bot, dp
 import sqlite3
 import httpx
 
+async def run_bot():
+    if not bot: return
+    while True:
+        try:
+            await bot.delete_webhook(drop_pending_updates=True)
+            await dp.start_polling(bot)
+        except Exception as e:
+            print(f"Bot polling error: {e}")
+            await asyncio.sleep(5)
+
 async def keep_awake():
     """Background task to ping the server every 3 minutes to keep it awake on Render."""
     while True:
@@ -41,6 +51,14 @@ async def lifespan(app: FastAPI):
 
     try:
         with sqlite3.connect("vrebro.db") as conn:
+            conn.execute("ALTER TABLE products ADD COLUMN is_weighted BOOLEAN DEFAULT 0")
+            conn.execute("ALTER TABLE products ADD COLUMN weight_step INTEGER")
+            conn.execute("ALTER TABLE order_items ADD COLUMN product_name VARCHAR")
+    except Exception as e:
+        print(f"Migration for products/order_items: {e}")
+
+    try:
+        with sqlite3.connect("vrebro.db") as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS store_settings (
                     key VARCHAR PRIMARY KEY,
@@ -56,9 +74,8 @@ async def lifespan(app: FastAPI):
     
     bot_task = None
     if bot:
-        await bot.delete_webhook(drop_pending_updates=True)
-        bot_task = asyncio.create_task(dp.start_polling(bot))
-        print("Telegram Bot started!")
+        bot_task = asyncio.create_task(run_bot())
+        print("Telegram Bot started with resilient polling!")
         
     keep_awake_task = asyncio.create_task(keep_awake())
         

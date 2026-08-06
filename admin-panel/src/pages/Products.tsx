@@ -17,6 +17,8 @@ interface Product {
   is_active: boolean;
   is_promo: boolean;
   promo_price: number | null;
+  is_weighted: boolean;
+  weight_step: number | null;
 }
 
 export default function Products() {
@@ -47,7 +49,9 @@ export default function Products() {
     image_url: '',
     is_active: true,
     is_promo: false,
-    promo_price: ''
+    promo_price: '',
+    is_weighted: false,
+    weight_step: ''
   });
 
   const fetchData = async () => {
@@ -78,13 +82,16 @@ export default function Products() {
         image_url: prod.image_url || '',
         is_active: prod.is_active,
         is_promo: prod.is_promo,
-        promo_price: prod.promo_price ? prod.promo_price.toString() : ''
+        promo_price: prod.promo_price ? prod.promo_price.toString() : '',
+        is_weighted: prod.is_weighted,
+        weight_step: prod.weight_step ? prod.weight_step.toString() : ''
       });
     } else {
       setEditingId(null);
       setFormData({
         name: '', category_id: categories[0]?.id.toString() || '', description: '', 
-        price: '', image_url: '', is_active: true, is_promo: false, promo_price: ''
+        price: '', image_url: '', is_active: true, is_promo: false, promo_price: '',
+        is_weighted: false, weight_step: ''
       });
     }
     setIsModalOpen(true);
@@ -159,7 +166,9 @@ export default function Products() {
       image_url: formData.image_url,
       is_active: formData.is_active,
       is_promo: formData.is_promo,
-      promo_price: formData.promo_price ? parseFloat(formData.promo_price) : null
+      promo_price: formData.promo_price ? parseFloat(formData.promo_price) : null,
+      is_weighted: formData.is_weighted,
+      weight_step: formData.weight_step ? parseInt(formData.weight_step) : null
     };
 
     try {
@@ -309,6 +318,16 @@ export default function Products() {
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id="is_promo" checked={formData.is_promo} onChange={e => setFormData({...formData, is_promo: e.target.checked})} className="w-5 h-5 rounded border-neutral-800 bg-neutral-900 accent-orange-500" />
                   <label htmlFor="is_promo" className="text-orange-400">Діє акція</label>
+                </div>
+                <div className="col-span-2 grid grid-cols-2 gap-4 border-t border-neutral-800 pt-4 mt-2">
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="is_weighted" checked={formData.is_weighted} onChange={e => setFormData({...formData, is_weighted: e.target.checked})} className="w-5 h-5 rounded border-neutral-800 bg-neutral-900 accent-orange-500" />
+                    <label htmlFor="is_weighted" className="text-blue-400">Ваговий товар</label>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-neutral-400 mb-1">Крок ваги (грами)</label>
+                    <input type="number" step="1" value={formData.weight_step} onChange={e => setFormData({...formData, weight_step: e.target.value})} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2 text-white" disabled={!formData.is_weighted} required={formData.is_weighted} />
+                  </div>
                 </div>
               </div>
               <button type="submit" className="w-full bg-[var(--color-primary)] hover:bg-orange-600 text-white font-medium py-3 rounded-xl transition-colors mt-6 cursor-pointer">

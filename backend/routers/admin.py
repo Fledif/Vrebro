@@ -251,7 +251,7 @@ async def toggle_product(id: int, db: AsyncSession = Depends(get_db)):
 
 # --- ORDER MANAGEMENT ---
 
-ALLOWED_STATUSES = {"NEW", "REVIEWED", "EDITED", "PACKING", "SHIPPED", "CONFIRMED"}
+ALLOWED_STATUSES = {"NEW", "REVIEWED", "EDITED", "PACKING", "SHIPPED", "CONFIRMED", "CANCELLED"}
 
 @protected_router.get("/orders", response_model=List[OrderSchema])
 async def get_orders(

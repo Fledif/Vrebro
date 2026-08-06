@@ -85,14 +85,14 @@ async def ai_chat(req: ChatRequest, db: AsyncSession = Depends(get_db)):
     products_query = await db.execute(select(Product))
     products = products_query.scalars().all()
     
-    total_revenue = sum(o.total_price for o in orders if o.status != "cancelled")
-    active_orders = len([o for o in orders if o.status in ["new", "processing"]])
+    total_revenue = sum(o.total_price for o in orders if o.status != "CANCELLED")
+    active_orders = len([o for o in orders if o.status in ["NEW", "REVIEWED", "EDITED", "PACKING", "SHIPPED"]])
     
     stats_text = (
         f"Статистика магазину:\n"
         f"- Всього товарів: {len(products)}\n"
         f"- Всього замовлень: {len(orders)}\n"
-        f"- Активних замовлень (new, processing): {active_orders}\n"
+        f"- Активних замовлень: {active_orders}\n"
         f"- Загальний дохід (не скасовані): {total_revenue} грн\n"
     )
     

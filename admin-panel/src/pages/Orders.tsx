@@ -3,14 +3,15 @@ import { api } from '../api';
 import type { Order } from '../api';
 import { RefreshCcw, PackageOpen } from 'lucide-react';
 
-const STATUSES = ["NEW", "REVIEWED", "EDITED", "PACKING", "SHIPPED", "CONFIRMED"];
+const STATUSES = ["NEW", "REVIEWED", "EDITED", "PACKING", "SHIPPED", "CONFIRMED", "CANCELLED"];
 const statusLabels: Record<string, string> = {
   NEW: 'Не розглянуто',
   REVIEWED: 'Розглянуто',
   EDITED: 'Відредаговано',
   PACKING: 'Упаковується',
   SHIPPED: 'Відправлено',
-  CONFIRMED: 'Підтверджено'
+  CONFIRMED: 'Підтверджено',
+  CANCELLED: 'Скасовано'
 };
 
 export default function Orders() {
@@ -97,6 +98,7 @@ export default function Orders() {
                   className={`px-4 py-2 rounded-xl text-sm font-bold border-2 cursor-pointer outline-none
                     ${order.status === 'NEW' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 
                       order.status === 'CONFIRMED' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
+                      order.status === 'CANCELLED' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
                       order.status === 'SHIPPED' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' : 
                       'bg-orange-500/10 text-orange-500 border-orange-500/20'}
                   `}
@@ -119,8 +121,8 @@ export default function Orders() {
                 {order.items.map(item => (
                   <div key={item.id} className="flex justify-between items-center bg-neutral-800/50 p-3 rounded-lg">
                     <div className="flex items-center gap-3">
-                      <img src={item.product.image_url} alt="" className="w-10 h-10 rounded object-cover" />
-                      <span className="text-sm text-neutral-200">{item.product.name}</span>
+                      <img src={item.product?.image_url || 'https://placehold.co/100x100/1a1a1a/555555?text=Видалено'} alt="" className="w-10 h-10 rounded object-cover" />
+                      <span className="text-sm text-neutral-200">{item.product?.name || item.product_name || "Видалений товар"}</span>
                     </div>
                     <div className="text-sm font-medium">
                       x{item.quantity} = {item.quantity * item.price_at_purchase} грн
