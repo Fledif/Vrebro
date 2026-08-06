@@ -3,8 +3,8 @@ from typing import Optional
 from datetime import datetime
 
 class CategoryBase(BaseModel):
-    name: str = Field(..., min_length=1)
-    icon: Optional[str] = None
+    name: str = Field(..., min_length=1, max_length=100)
+    icon: Optional[str] = Field(default=None, max_length=100)
     sort_order: int = 0
 
 class CategoryCreate(CategoryBase):
@@ -21,11 +21,13 @@ class CategorySchema(CategoryBase):
 
 class ProductBase(BaseModel):
     category_id: int
-    name: str = Field(..., min_length=1)
-    description: Optional[str] = None
+    name: str = Field(..., min_length=1, max_length=150)
+    description: Optional[str] = Field(default=None, max_length=1000)
     price: float = Field(..., gt=0)
-    image_url: str = Field(..., min_length=1)
+    image_url: str = Field(..., min_length=1, max_length=255)
     is_active: bool = True
+    is_promo: bool = False
+    promo_price: Optional[float] = Field(default=None, gt=0)
 
 class ProductCreate(ProductBase):
     pass

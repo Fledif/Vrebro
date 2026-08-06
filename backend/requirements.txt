@@ -10,3 +10,5 @@ aiohttp
 aiogram
 greenlet
 httpx
+PyJWT
+passlib[bcrypt]

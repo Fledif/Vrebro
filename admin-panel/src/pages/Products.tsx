@@ -1,0 +1,221 @@
+import { useEffect, useState } from 'react';
+import { api } from '../api';
+import { Plus, Edit2, X, Tag } from 'lucide-react';
+
+interface Category {
+  id: number;
+  name: string;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  category_id: number;
+  description: string;
+  price: number;
+  image_url: string;
+  is_active: boolean;
+  is_promo: boolean;
+  promo_price: number | null;
+}
+
+export default function Products() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    category_id: '',
+    description: '',
+    price: '',
+    image_url: '',
+    is_active: true,
+    is_promo: false,
+    promo_price: ''
+  });
+
+  const fetchData = async () => {
+    try {
+      const [prodRes, catRes] = await Promise.all([
+        api.get('/admin/products'),
+        api.get('/admin/categories')
+      ]);
+      setProducts(prodRes.data);
+      setCategories(catRes.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleOpenModal = (prod?: Product) => {
+    if (prod) {
+      setEditingId(prod.id);
+      setFormData({
+        name: prod.name,
+        category_id: prod.category_id.toString(),
+        description: prod.description || '',
+        price: prod.price.toString(),
+        image_url: prod.image_url || '',
+        is_active: prod.is_active,
+        is_promo: prod.is_promo,
+        promo_price: prod.promo_price ? prod.promo_price.toString() : ''
+      });
+    } else {
+      setEditingId(null);
+      setFormData({
+        name: '', category_id: categories[0]?.id.toString() || '', description: '', 
+        price: '', image_url: '', is_active: true, is_promo: false, promo_price: ''
+      });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = {
+      name: formData.name,
+      category_id: parseInt(formData.category_id),
+      description: formData.description,
+      price: parseFloat(formData.price),
+      image_url: formData.image_url,
+      is_active: formData.is_active,
+      is_promo: formData.is_promo,
+      promo_price: formData.promo_price ? parseFloat(formData.promo_price) : null
+    };
+
+    try {
+      if (editingId) {
+        await api.put(`/admin/products/${editingId}`, payload);
+      } else {
+        await api.post('/admin/products', payload);
+      }
+      setIsModalOpen(false);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Помилка збереження');
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">Товари</h1>
+        <button 
+          onClick={() => handleOpenModal()}
+          className="flex items-center gap-2 bg-[var(--color-primary)] hover:bg-orange-600 text-white px-4 py-2 rounded-xl transition-colors cursor-pointer"
+        >
+          <Plus size={20} />
+          Додати товар
+        </button>
+      </div>
+
+      <div className="bg-[var(--color-surface)] border border-neutral-800 rounded-2xl overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-neutral-800/50 border-b border-neutral-800 text-neutral-400 text-sm">
+              <th className="p-4 font-medium">Фото</th>
+              <th className="p-4 font-medium">Назва</th>
+              <th className="p-4 font-medium">Ціна</th>
+              <th className="p-4 font-medium">Статус</th>
+              <th className="p-4 font-medium text-right">Дії</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map(p => (
+              <tr key={p.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/20 transition-colors">
+                <td className="p-4">
+                  <img src={p.image_url} alt="" className="w-12 h-12 rounded-lg object-cover bg-neutral-800" />
+                </td>
+                <td className="p-4 font-medium">
+                  {p.name}
+                  {p.is_promo && <span className="ml-2 inline-flex items-center gap-1 text-[10px] uppercase bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full"><Tag size={10}/> Акція</span>}
+                </td>
+                <td className="p-4">
+                  {p.is_promo ? (
+                    <div>
+                      <span className="line-through text-neutral-500 text-sm mr-2">{p.price}</span>
+                      <span className="text-orange-400 font-bold">{p.promo_price}</span>
+                    </div>
+                  ) : (
+                    <span>{p.price}</span>
+                  )}
+                </td>
+                <td className="p-4">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.is_active ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                    {p.is_active ? 'В наявності' : 'Немає'}
+                  </span>
+                </td>
+                <td className="p-4 text-right">
+                  <button onClick={() => handleOpenModal(p)} className="p-2 text-neutral-400 hover:text-white bg-neutral-800 rounded-lg cursor-pointer">
+                    <Edit2 size={16} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[var(--color-surface)] border border-neutral-800 rounded-2xl p-6 w-full max-w-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">{editingId ? 'Редагувати товар' : 'Новий товар'}</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-neutral-400 hover:text-white cursor-pointer"><X size={24} /></button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-sm text-neutral-400 mb-1">Назва</label>
+                  <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2 text-white" required />
+                </div>
+                <div>
+                  <label className="block text-sm text-neutral-400 mb-1">Категорія</label>
+                  <select value={formData.category_id} onChange={e => setFormData({...formData, category_id: e.target.value})} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2 text-white" required>
+                    <option value="">Виберіть...</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-neutral-400 mb-1">URL Фото</label>
+                  <input type="url" value={formData.image_url} onChange={e => setFormData({...formData, image_url: e.target.value})} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2 text-white" required />
+                </div>
+                <div>
+                  <label className="block text-sm text-neutral-400 mb-1">Базова ціна (грн)</label>
+                  <input type="number" step="0.01" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2 text-white" required />
+                </div>
+                <div>
+                  <label className="block text-sm text-neutral-400 mb-1">Акційна ціна (грн)</label>
+                  <input type="number" step="0.01" value={formData.promo_price} onChange={e => setFormData({...formData, promo_price: e.target.value})} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2 text-white" disabled={!formData.is_promo} required={formData.is_promo} />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm text-neutral-400 mb-1">Опис</label>
+                  <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2 h-24 text-white" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="is_active" checked={formData.is_active} onChange={e => setFormData({...formData, is_active: e.target.checked})} className="w-5 h-5 rounded border-neutral-800 bg-neutral-900 accent-orange-500" />
+                  <label htmlFor="is_active">В наявності</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="is_promo" checked={formData.is_promo} onChange={e => setFormData({...formData, is_promo: e.target.checked})} className="w-5 h-5 rounded border-neutral-800 bg-neutral-900 accent-orange-500" />
+                  <label htmlFor="is_promo" className="text-orange-400">Діє акція</label>
+                </div>
+              </div>
+              <button type="submit" className="w-full bg-[var(--color-primary)] hover:bg-orange-600 text-white font-medium py-3 rounded-xl transition-colors mt-6 cursor-pointer">
+                Зберегти
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

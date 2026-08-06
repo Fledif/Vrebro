@@ -23,6 +23,8 @@ class Product(Base):
     price = Column(Float, nullable=False)
     image_url = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
+    is_promo = Column(Boolean, default=False)
+    promo_price = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     category = relationship("Category", back_populates="products")

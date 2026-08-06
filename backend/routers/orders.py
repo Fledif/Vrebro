@@ -7,6 +7,9 @@ from models.order import Order, OrderItem
 from models.product import Product
 from schemas.order_schema import OrderSchema, OrderCreate
 import uuid
+from config import settings
+from bot import bot
+from websocket_manager import manager
 
 router = APIRouter()
 
@@ -25,12 +28,13 @@ async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_d
         if not product.is_active:
             raise HTTPException(status_code=400, detail=f"Product {item.product_id} is inactive")
             
+        actual_price = product.promo_price if product.is_promo and product.promo_price is not None else product.price
         validated_items.append({
             "product_id": item.product_id,
             "quantity": item.quantity,
-            "price_at_purchase": product.price
+            "price_at_purchase": actual_price
         })
-        total_price += product.price * item.quantity
+        total_price += actual_price * item.quantity
 
     order_number = f"ORD-{uuid.uuid4().hex[:8].upper()}"
     
@@ -58,6 +62,22 @@ async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_d
         
     await db.commit()
     await db.refresh(new_order)
+    
+    await manager.broadcast("update")
+    
+    if bot and settings.ADMIN_CHAT_ID:
+        try:
+            items_text = "\n".join([f"- Товар #{i['product_id']} x{i['quantity']} ({i['price_at_purchase']} грн)" for i in validated_items])
+            msg = f"🚨 **НОВЕ ЗАМОВЛЕННЯ {new_order.order_number}**\n\n" \
+                  f"👤 Ім'я: {new_order.customer_name}\n" \
+                  f"📞 Тел: {new_order.phone}\n" \
+                  f"📍 Адреса: {new_order.address}\n" \
+                  f"💬 Комент: {new_order.comment or '-'}\n\n" \
+                  f"🛒 Товари:\n{items_text}\n\n" \
+                  f"💰 Сума: **{new_order.total_price} грн**"
+            await bot.send_message(chat_id=settings.ADMIN_CHAT_ID, text=msg, parse_mode="Markdown")
+        except Exception as e:
+            print(f"Failed to send admin notification: {e}")
     
     # Eager load the items for the response
     from sqlalchemy.orm import selectinload
