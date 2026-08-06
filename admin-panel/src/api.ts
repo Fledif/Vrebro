@@ -6,6 +6,9 @@ export const api = axios.create({
   baseURL: API_URL,
 });
 
+export const updateProduct = (id: number, data: any) => api.put(`/products/${id}`, data).then(res => res.data);
+export const deleteProduct = (id: number) => api.delete(`/products/${id}`).then(res => res.data);
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('admin_token');
   if (token) {

@@ -29,7 +29,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
 
-async def call_groq(messages: list, model: str = "llama3-8b-8192", temperature: float = 0.7):
+async def call_groq(messages: list, model: str = "llama-3.1-8b-instant", temperature: float = 0.7):
     if not settings.GROQ_API_KEY:
         raise HTTPException(status_code=500, detail="GROQ_API_KEY is not set")
     

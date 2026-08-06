@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { Plus, Edit2, X, Tag } from 'lucide-react';
+import { Plus, Edit2, Trash, X, Tag } from 'lucide-react';
 
 interface Category {
   id: number;
@@ -24,6 +24,17 @@ export default function Products() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("Ви впевнені, що хочете видалити цей товар?")) return;
+    try {
+      await api.delete(`/admin/products/${id}`);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Помилка видалення товару");
+    }
+  };
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [isSuggestingCat, setIsSuggestingCat] = useState(false);
@@ -85,8 +96,8 @@ export default function Products() {
 
     const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
     if (!apiKey) {
-      alert("Ключ ImgBB не знайдено. Використовуємо картинку-заглушку для тестування!");
-      setFormData(prev => ({...prev, image_url: "https://via.placeholder.com/300x300.png?text=No+Image"}));
+      alert("Ключ ImgBB не знайдено. Використовуємо картинку-заглушку для розробки.");
+      setFormData(prev => ({...prev, image_url: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZmlsbD0iIzg4OCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg=="}));
       return;
     }
 
@@ -223,9 +234,14 @@ export default function Products() {
                   </span>
                 </td>
                 <td className="p-4 text-right">
-                  <button onClick={() => handleOpenModal(p)} className="p-2 text-neutral-400 hover:text-white bg-neutral-800 rounded-lg cursor-pointer">
-                    <Edit2 size={16} />
-                  </button>
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => handleOpenModal(p)} className="p-2 text-neutral-400 hover:text-white bg-neutral-800 rounded-lg cursor-pointer">
+                      <Edit2 size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(p.id)} className="p-2 text-neutral-400 hover:text-red-500 bg-neutral-800 rounded-lg cursor-pointer">
+                      <Trash size={16} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
