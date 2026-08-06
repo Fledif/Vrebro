@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { Plus, Edit2, Trash, X, Tag } from 'lucide-react';
-import axios from 'axios';
 
 interface Category {
   id: number;
@@ -95,39 +94,23 @@ export default function Products() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    let apiKey = import.meta.env.VITE_IMGBB_API_KEY;
-    try {
-      if (!apiKey) {
-        const res = await api.get('/admin/imgbb-key');
-        apiKey = res.data.key;
-      }
-    } catch (e) {
-      console.warn("Failed to fetch ImgBB key from backend", e);
-    }
-
-    if (!apiKey) {
-      alert("Ключ ImgBB не знайдено. Додайте IMGBB_API_KEY в налаштування сервера (Render -> Environment). Використовуємо сірий квадрат для тесту.");
-      setFormData(prev => ({...prev, image_url: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZmlsbD0iIzg4OCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg=="}));
-      return;
-    }
-
     setIsUploading(true);
     const data = new FormData();
     data.append('image', file);
 
     try {
-      const res = await axios.post(`https://api.imgbb.com/1/upload?key=${apiKey}`, data, {
+      const res = await api.post('/admin/upload-image', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 30000 // 30 seconds timeout
       });
-      if (res.data && res.data.success) {
-        setFormData(prev => ({...prev, image_url: res.data.data.url}));
+      if (res.data && res.data.url) {
+        setFormData(prev => ({...prev, image_url: res.data.url}));
       } else {
-        alert("Помилка ImgBB: " + (res.data?.error?.message || 'Невідома помилка'));
+        alert("Помилка: сервер не повернув посилання на фото");
       }
     } catch (err: any) {
       console.error("Upload error:", err);
-      alert("Не вдалося завантажити фото: " + (err.message || 'перевірте підключення до Інтернету або вимкніть блокувальник реклами (adblock).'));
+      alert("Не вдалося завантажити фото: " + (err.response?.data?.detail || err.message || 'Невідома помилка'));
     } finally {
       setIsUploading(false);
     }

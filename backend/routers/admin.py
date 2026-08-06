@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.security import OAuth2PasswordRequestForm
 import jwt
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -161,6 +162,31 @@ async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
 @protected_router.get("/imgbb-key")
 async def get_imgbb_key():
     return {"key": settings.IMGBB_API_KEY}
+
+@protected_router.post("/upload-image")
+async def upload_image(image: UploadFile = File(...)):
+    if not settings.IMGBB_API_KEY:
+        raise HTTPException(status_code=500, detail="IMGBB_API_KEY is not configured on the server")
+        
+    image_bytes = await image.read()
+    
+    async with httpx.AsyncClient() as client:
+        # ImgBB expects multipart/form-data
+        files = {'image': (image.filename, image_bytes, image.content_type)}
+        response = await client.post(
+            f"https://api.imgbb.com/1/upload?key={settings.IMGBB_API_KEY}",
+            files=files,
+            timeout=30.0
+        )
+        
+        if response.status_code != 200:
+            raise HTTPException(status_code=500, detail=f"ImgBB error: {response.text}")
+            
+        data = response.json()
+        if data.get("success"):
+            return {"url": data["data"]["url"]}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to upload to ImgBB")
 
 @protected_router.get("/products", response_model=List[ProductSchema])
 async def get_products(db: AsyncSession = Depends(get_db)):
