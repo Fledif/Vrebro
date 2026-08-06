@@ -48,25 +48,43 @@ app.include_router(ai.router, prefix="/api/admin/ai", tags=["ai"])
 app.include_router(catalog.router, prefix="/api/catalog", tags=["catalog"])
 app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
 
-frontend_path = os.path.join(os.path.dirname(__file__), "..", "admin-panel", "dist")
+admin_path = os.path.join(os.path.dirname(__file__), "..", "admin-panel", "dist")
+miniapp_path = os.path.join(os.path.dirname(__file__), "..", "miniapp", "frontend", "dist")
 
-if os.path.exists(os.path.join(frontend_path, "assets")):
-    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="assets")
+if os.path.exists(os.path.join(admin_path, "assets")):
+    app.mount("/assets", StaticFiles(directory=os.path.join(admin_path, "assets")), name="admin_assets")
 
-@app.get("/{full_path:path}")
-async def serve_frontend(full_path: str):
-    if full_path.startswith("api/"):
-        raise HTTPException(status_code=404, detail="API route not found")
-    
-    file_path = os.path.join(frontend_path, full_path)
+if os.path.exists(os.path.join(miniapp_path, "assets")):
+    app.mount("/miniapp/assets", StaticFiles(directory=os.path.join(miniapp_path, "assets")), name="miniapp_assets")
+
+@app.get("/miniapp")
+@app.get("/miniapp/")
+@app.get("/miniapp/{full_path:path}")
+async def serve_miniapp(full_path: str = ""):
+    file_path = os.path.join(miniapp_path, full_path)
     if os.path.exists(file_path) and os.path.isfile(file_path):
         return FileResponse(file_path)
     
-    index_path = os.path.join(frontend_path, "index.html")
+    index_path = os.path.join(miniapp_path, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
         
-    return {"status": "ok", "message": "Unified Backend is running (Frontend build not found)"}
+    return {"status": "ok", "message": "Mini App build not found"}
+
+@app.get("/{full_path:path}")
+async def serve_admin(full_path: str):
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="API route not found")
+    
+    file_path = os.path.join(admin_path, full_path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return FileResponse(file_path)
+    
+    index_path = os.path.join(admin_path, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+        
+    return {"status": "ok", "message": "Admin Panel build not found"}
 
 if __name__ == "__main__":
     import uvicorn
