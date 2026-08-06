@@ -43,6 +43,19 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     access_token = create_access_token(data={"sub": form_data.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
+from sqlalchemy import delete
+from models.user import User
+
+@protected_router.post("/purge")
+async def purge_db(db: AsyncSession = Depends(get_db)):
+    await db.execute(delete(OrderItem))
+    await db.execute(delete(Order))
+    await db.execute(delete(Product))
+    await db.execute(delete(Category))
+    await db.execute(delete(User))
+    await db.commit()
+    return {"message": "All data cleared"}
+
 
 # --- CATEGORY CRUD ---
 
