@@ -16,11 +16,13 @@ asyncio.run(setup())
 
 # Create a dummy category and product
 from models.product import Category, Product
-from database import SessionLocal
+from database import get_db
 import datetime
 
 async def seed():
-    async with SessionLocal() as db:
+    # Because get_db yields a session, we can just use the AsyncSession directly
+    from sqlalchemy.ext.asyncio import AsyncSession
+    async with AsyncSession(engine) as db:
         c = Category(name="TestCat")
         db.add(c)
         await db.commit()
