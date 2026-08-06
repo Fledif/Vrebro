@@ -145,6 +145,22 @@ async def create_product(product: ProductCreate, db: AsyncSession = Depends(get_
     await db.refresh(new_product)
     return new_product
 
+@protected_router.get("/dashboard/stats")
+async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Order))
+    orders = result.scalars().all()
+    
+    total_revenue = sum(order.total_price for order in orders if order.status != "CANCELLED")
+    
+    return {
+        "total_revenue": total_revenue,
+        "total_orders": len(orders)
+    }
+
+@protected_router.get("/imgbb-key")
+async def get_imgbb_key():
+    return {"key": settings.IMGBB_API_KEY}
+
 @protected_router.get("/products", response_model=List[ProductSchema])
 async def get_products(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Product))

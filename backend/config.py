@@ -9,7 +9,8 @@ class Settings:
     SECRET_KEY: str = os.getenv("SECRET_KEY", "change-me")
     BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
     ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
-    ADMIN_PASSWORD_HASH: str = os.getenv("ADMIN_PASSWORD_HASH", "$2b$12$W6/TV/D6ddCH6qbmlDikxuTZ43gmGnxZ1OuLl8hvt18wq7.N6314G") # default hash for 'admin'
+    ADMIN_PASSWORD_HASH: str = os.getenv("ADMIN_PASSWORD_HASH", "$2b$12$K1nUaH54sL4n2e3aQJ/YzeR6j/J5D6mC7oV9E8C0aK/lqV/N.8cO") # bcrypt hash for "admin"
+    IMGBB_API_KEY: str = os.getenv("IMGBB_API_KEY", "")
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "super-secret-jwt-key")
     ADMIN_CHAT_ID: str = os.getenv("ADMIN_CHAT_ID", "")
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")

@@ -94,9 +94,18 @@ export default function Products() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
+    let apiKey = import.meta.env.VITE_IMGBB_API_KEY;
+    try {
+      if (!apiKey) {
+        const res = await api.get('/admin/imgbb-key');
+        apiKey = res.data.key;
+      }
+    } catch (e) {
+      console.warn("Failed to fetch ImgBB key from backend", e);
+    }
+
     if (!apiKey) {
-      alert("Ключ ImgBB не знайдено. Використовуємо картинку-заглушку для розробки.");
+      alert("Ключ ImgBB не знайдено. Додайте IMGBB_API_KEY в налаштування сервера (Render -> Environment). Використовуємо сірий квадрат для тесту.");
       setFormData(prev => ({...prev, image_url: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZmlsbD0iIzg4OCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg=="}));
       return;
     }
