@@ -17,6 +17,18 @@ import asyncio
 from bot import bot, dp
 
 import sqlite3
+import httpx
+
+async def keep_awake():
+    """Background task to ping the server every 3 minutes to keep it awake on Render."""
+    while True:
+        await asyncio.sleep(180)
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.get("https://vrebro.onrender.com/", headers={"User-Agent": "Render-Keep-Alive-Bot/1.0"})
+            print("Keep-awake ping sent successfully.")
+        except Exception as e:
+            print(f"Keep-awake ping failed: {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -48,10 +60,14 @@ async def lifespan(app: FastAPI):
         bot_task = asyncio.create_task(dp.start_polling(bot))
         print("Telegram Bot started!")
         
+    keep_awake_task = asyncio.create_task(keep_awake())
+        
     yield
     
     if bot_task:
         bot_task.cancel()
+    if keep_awake_task:
+        keep_awake_task.cancel()
 
 app = FastAPI(title="VreBRO Unified Backend", lifespan=lifespan)
 
