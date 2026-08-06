@@ -9,6 +9,13 @@ const api = axios.create({
   },
 });
 
+api.interceptors.request.use((config) => {
+  if (config.method?.toLowerCase() === 'get') {
+    config.params = { ...config.params, _t: new Date().getTime() };
+  }
+  return config;
+});
+
 export interface Category {
   id: number;
   name: string;

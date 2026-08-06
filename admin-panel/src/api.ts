@@ -36,6 +36,10 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Add cache buster to all GET requests
+  if (config.method?.toLowerCase() === 'get') {
+    config.params = { ...config.params, _t: new Date().getTime() };
+  }
   return config;
 });
 
