@@ -1,27 +1,17 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import type { Order } from '../api';
 import { RefreshCcw, PackageOpen } from 'lucide-react';
 
-interface OrderItem {
-  id: number;
-  product: { name: string; image_url: string };
-  quantity: number;
-  price_at_purchase: number;
-}
-interface Order {
-  id: number;
-  order_number: string;
-  customer_name: string;
-  phone: string;
-  address: string;
-  comment: string;
-  status: string;
-  total_price: number;
-  created_at: string;
-  items: OrderItem[];
-}
-
-const STATUSES = ["NEW", "ACCEPTED", "COOKING", "READY", "DELIVERING", "COMPLETED", "CANCELLED"];
+const STATUSES = ["NEW", "REVIEWED", "EDITED", "PACKING", "SHIPPED", "CONFIRMED"];
+const statusLabels: Record<string, string> = {
+  NEW: 'Не розглянуто',
+  REVIEWED: 'Розглянуто',
+  EDITED: 'Відредаговано',
+  PACKING: 'Упаковується',
+  SHIPPED: 'Відправлено',
+  CONFIRMED: 'Підтверджено'
+};
 
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -30,7 +20,7 @@ export default function Orders() {
   const fetchOrders = async () => {
     try {
       const res = await api.get('/admin/orders');
-      setOrders(res.data);
+      setOrders(res.data.filter((o: Order) => o.status !== 'CONFIRMED'));
     } catch (err) {
       console.error(err);
     } finally {
@@ -70,6 +60,17 @@ export default function Orders() {
     }
   };
 
+  const handleDeliveryCostUpdate = async (orderId: number, cost: number) => {
+    try {
+      const currentStatus = orders.find(o => o.id === orderId)?.status || "NEW";
+      await api.patch(`/admin/orders/${orderId}/status`, { status: currentStatus, delivery_cost: cost });
+      fetchOrders();
+    } catch (err) {
+      console.error(err);
+      alert('Помилка оновлення вартості доставки');
+    }
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
@@ -95,13 +96,13 @@ export default function Orders() {
                   onChange={(e) => handleStatusChange(order.id, e.target.value)}
                   className={`px-4 py-2 rounded-xl text-sm font-bold border-2 cursor-pointer outline-none
                     ${order.status === 'NEW' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 
-                      order.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
-                      order.status === 'CANCELLED' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 
+                      order.status === 'CONFIRMED' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
+                      order.status === 'SHIPPED' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' : 
                       'bg-orange-500/10 text-orange-500 border-orange-500/20'}
                   `}
                 >
                   {STATUSES.map(s => (
-                    <option key={s} value={s} className="bg-neutral-900 text-white">{s}</option>
+                    <option key={s} value={s} className="bg-neutral-900 text-white">{statusLabels[s]}</option>
                   ))}
                 </select>
               </div>
@@ -129,8 +130,29 @@ export default function Orders() {
               </div>
 
               <div className="flex justify-between items-center pt-4 border-t border-neutral-800">
-                <span className="text-neutral-400">Загальна сума:</span>
-                <span className="text-2xl font-bold text-[var(--color-primary)]">{order.total_price} грн</span>
+                <span className="text-neutral-400">Вартість доставки:</span>
+                <div className="flex gap-2">
+                  <input 
+                    type="number" 
+                    id={`delivery-${order.id}`}
+                    defaultValue={order.delivery_cost || 0}
+                    className="bg-neutral-900 border border-neutral-700 px-3 py-1 rounded-lg w-24 text-white font-bold"
+                  />
+                  <button 
+                    onClick={() => {
+                      const val = (document.getElementById(`delivery-${order.id}`) as HTMLInputElement).value;
+                      handleDeliveryCostUpdate(order.id, Number(val));
+                    }}
+                    className="px-3 py-1 bg-[var(--color-primary)] text-white rounded-lg text-sm font-bold hover:opacity-80"
+                  >
+                    Зберегти
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-4 border-t border-neutral-800 mt-4">
+                <span className="text-neutral-400 font-bold">Разом до сплати (з доставкою):</span>
+                <span className="text-2xl font-black text-[var(--color-primary)]">{order.total_price + (order.delivery_cost || 0)} грн</span>
               </div>
             </div>
           ))}

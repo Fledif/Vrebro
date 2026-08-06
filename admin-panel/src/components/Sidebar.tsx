@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Tags, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, Tags, LogOut, FileText, Settings as SettingsIcon } from 'lucide-react';
 
 export default function Sidebar() {
   const location = useLocation();
@@ -11,8 +11,10 @@ export default function Sidebar() {
 
   const navItems = [
     { name: 'Замовлення', path: '/', icon: LayoutDashboard },
+    { name: 'Чеки (Архів)', path: '/receipts', icon: FileText },
     { name: 'Товари', path: '/products', icon: Package },
     { name: 'Категорії', path: '/categories', icon: Tags },
+    { name: 'Налаштування', path: '/settings', icon: SettingsIcon },
   ];
 
   return (

@@ -1,5 +1,26 @@
 import axios from 'axios';
 
+export interface OrderItem {
+  id: number;
+  product: { name: string; image_url: string };
+  quantity: number;
+  price_at_purchase: number;
+}
+
+export interface Order {
+  id: number;
+  order_number: string;
+  customer_name: string;
+  phone: string;
+  address: string;
+  comment: string;
+  status: string;
+  total_price: number;
+  delivery_cost: number;
+  created_at: string;
+  items: OrderItem[];
+}
+
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000/api' : 'https://vrebro.onrender.com/api');
 
 export const api = axios.create({

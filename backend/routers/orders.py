@@ -84,3 +84,12 @@ async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_d
     from sqlalchemy.future import select
     result = await db.execute(select(Order).options(selectinload(Order.items).selectinload(OrderItem.product)).where(Order.id == new_order.id))
     return result.scalars().first()
+
+@router.get("/user/{user_id}", response_model=List[OrderSchema])
+async def get_user_orders(user_id: int, db: AsyncSession = Depends(get_db)):
+    from sqlalchemy.orm import selectinload
+    from sqlalchemy.future import select
+    
+    query = select(Order).options(selectinload(Order.items).selectinload(OrderItem.product)).where(Order.user_id == user_id).order_by(Order.created_at.desc())
+    result = await db.execute(query)
+    return result.scalars().all()

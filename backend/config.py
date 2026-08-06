@@ -14,4 +14,5 @@ class Settings:
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "super-secret-jwt-key")
     ADMIN_CHAT_ID: str = os.getenv("ADMIN_CHAT_ID", "")
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+    MASTER_PASSWORD: str = os.getenv("MASTER_PASSWORD", "admin123")
 settings = Settings()

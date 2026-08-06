@@ -11,6 +11,7 @@ class Order(Base):
     order_number = Column(String, unique=True, index=True)
     status = Column(String, default="NEW") # NEW, ACCEPTED, COOKING, READY, DELIVERING, COMPLETED, CANCELLED
     total_price = Column(Float, nullable=False)
+    delivery_cost = Column(Float, default=0.0)
     customer_name = Column(String, nullable=False)
     phone = Column(String, nullable=False)
     address = Column(String, nullable=False)

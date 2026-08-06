@@ -17,6 +17,7 @@ class OrderCreate(BaseModel):
 
 class OrderStatusUpdate(BaseModel):
     status: str
+    delivery_cost: Optional[float] = None
 
 class OrderItemSchema(BaseModel):
     id: int
@@ -34,6 +35,7 @@ class OrderSchema(BaseModel):
     order_number: str
     status: str
     total_price: float
+    delivery_cost: float = 0.0
     customer_name: str
     phone: str
     address: str

@@ -11,6 +11,9 @@ const Catalog = React.lazy(() => import('./pages/Catalog'));
 const ProductDetail = React.lazy(() => import('./pages/ProductDetail'));
 const Cart = React.lazy(() => import('./pages/Cart'));
 const Checkout = React.lazy(() => import('./pages/Checkout'));
+const MyOrders = React.lazy(() => import('./pages/MyOrders'));
+
+import { User } from 'lucide-react';
 
 function Navigation() {
   const location = useLocation();
@@ -35,6 +38,10 @@ function Navigation() {
             {totalCount}
           </span>
         )}
+      </Link>
+      <Link to="/my-orders" className={clsx("flex flex-col items-center transition-colors", isActive('/my-orders') ? "text-brand-orange" : "text-gray-400 hover:text-brand-orange")}>
+        <User size={20} />
+        <span className="text-[10px] mt-1">Профіль</span>
       </Link>
     </nav>
   );
@@ -64,6 +71,7 @@ function App() {
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
+              <Route path="/my-orders" element={<MyOrders />} />
             </Routes>
           </Suspense>
         </main>

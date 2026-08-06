@@ -9,6 +9,7 @@ from typing import List, Optional
 from database import get_db
 from models.product import Category, Product
 from models.order import Order, OrderItem
+from models.settings import StoreSettings
 from schemas.product_schema import CategorySchema, CategoryCreate, CategoryUpdate, ProductSchema, ProductCreate, ProductUpdate
 from schemas.order_schema import OrderSchema, OrderStatusUpdate
 from auth import get_current_admin, verify_password, create_access_token
@@ -224,7 +225,7 @@ async def toggle_product(id: int, db: AsyncSession = Depends(get_db)):
 
 # --- ORDER MANAGEMENT ---
 
-ALLOWED_STATUSES = {"NEW", "ACCEPTED", "COOKING", "READY", "DELIVERING", "COMPLETED", "CANCELLED"}
+ALLOWED_STATUSES = {"NEW", "REVIEWED", "EDITED", "PACKING", "SHIPPED", "CONFIRMED"}
 
 @protected_router.get("/orders", response_model=List[OrderSchema])
 async def get_orders(
@@ -260,6 +261,9 @@ async def update_order_status(id: int, status_update: OrderStatusUpdate, db: Asy
         raise HTTPException(status_code=404, detail="Order not found")
         
     order.status = status_update.status
+    if status_update.delivery_cost is not None:
+        order.delivery_cost = status_update.delivery_cost
+        
     await db.commit()
     await db.refresh(order)
     
@@ -276,5 +280,29 @@ async def update_order_status(id: int, status_update: OrderStatusUpdate, db: Asy
             print(f"Failed to send telegram notification: {e}")
             
     return order
+
+from pydantic import BaseModel
+class PaymentCardUpdate(BaseModel):
+    card_number: str
+    master_password: str
+
+@router.get("/settings/payment_card")
+async def get_payment_card(db: AsyncSession = Depends(get_db)):
+    setting = await db.get(StoreSettings, "payment_card")
+    return {"card_number": setting.value if setting else ""}
+
+@protected_router.post("/settings/payment_card")
+async def update_payment_card(data: PaymentCardUpdate, db: AsyncSession = Depends(get_db)):
+    if data.master_password != settings.MASTER_PASSWORD:
+        raise HTTPException(status_code=403, detail="Invalid master password")
+        
+    setting = await db.get(StoreSettings, "payment_card")
+    if not setting:
+        setting = StoreSettings(key="payment_card", value=data.card_number)
+        db.add(setting)
+    else:
+        setting.value = data.card_number
+    await db.commit()
+    return {"status": "success", "card_number": setting.value}
 
 router.include_router(protected_router)

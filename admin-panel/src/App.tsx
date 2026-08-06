@@ -3,6 +3,8 @@ import Login from './pages/Login';
 import Orders from './pages/Orders';
 import Products from './pages/Products';
 import Categories from './pages/Categories';
+import Settings from './pages/Settings';
+import Receipts from './pages/Receipts';
 import ProtectedLayout from './components/ProtectedLayout';
 
 function App() {
@@ -13,8 +15,10 @@ function App() {
         
         <Route element={<ProtectedLayout />}>
           <Route path="/" element={<Orders />} />
+          <Route path="/receipts" element={<Receipts />} />
           <Route path="/products" element={<Products />} />
           <Route path="/categories" element={<Categories />} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
         
         <Route path="*" element={<Navigate to="/" replace />} />
