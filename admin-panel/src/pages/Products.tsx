@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { Plus, Edit2, Trash, X, Tag } from 'lucide-react';
+import axios from 'axios';
 
 interface Category {
   id: number;
@@ -115,19 +116,18 @@ export default function Products() {
     data.append('image', file);
 
     try {
-      const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-        method: 'POST',
-        body: data
+      const res = await axios.post(`https://api.imgbb.com/1/upload?key=${apiKey}`, data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 30000 // 30 seconds timeout
       });
-      const json = await res.json();
-      if (json.success) {
-        setFormData(prev => ({...prev, image_url: json.data.url}));
+      if (res.data && res.data.success) {
+        setFormData(prev => ({...prev, image_url: res.data.data.url}));
       } else {
-        alert("Помилка ImgBB: " + json.error?.message);
+        alert("Помилка ImgBB: " + (res.data?.error?.message || 'Невідома помилка'));
       }
-    } catch (err) {
-      console.error(err);
-      alert("Не вдалося завантажити фото");
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      alert("Не вдалося завантажити фото: " + (err.message || 'перевірте підключення до Інтернету або вимкніть блокувальник реклами (adblock).'));
     } finally {
       setIsUploading(false);
     }
