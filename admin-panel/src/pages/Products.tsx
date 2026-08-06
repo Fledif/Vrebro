@@ -25,6 +25,8 @@ export default function Products() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
+  const [isSuggestingCat, setIsSuggestingCat] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -107,6 +109,39 @@ export default function Products() {
       alert("Не вдалося завантажити фото");
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleGenerateDescription = async () => {
+    if (!formData.name) return alert("Спочатку введіть назву товару!");
+    setIsGeneratingDesc(true);
+    try {
+      const res = await api.post('/admin/ai/generate-description', { name: formData.name });
+      setFormData(prev => ({...prev, description: res.data.description}));
+    } catch (err) {
+      alert("Помилка генерації");
+    } finally {
+      setIsGeneratingDesc(false);
+    }
+  };
+
+  const handleSuggestCategory = async () => {
+    if (!formData.name) return alert("Спочатку введіть назву товару!");
+    setIsSuggestingCat(true);
+    try {
+      const res = await api.post('/admin/ai/suggest-category', { 
+        name: formData.name,
+        categories: categories.map(c => c.name)
+      });
+      const suggestedName = res.data.category;
+      const cat = categories.find(c => c.name.toLowerCase().includes(suggestedName.toLowerCase()) || suggestedName.toLowerCase().includes(c.name.toLowerCase()));
+      if (cat) {
+        setFormData(prev => ({...prev, category_id: cat.id.toString()}));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSuggestingCat(false);
     }
   };
 
@@ -212,7 +247,12 @@ export default function Products() {
                   <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2 text-white" required />
                 </div>
                 <div>
-                  <label className="block text-sm text-neutral-400 mb-1">Категорія</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-sm text-neutral-400">Категорія</label>
+                    <button type="button" onClick={handleSuggestCategory} disabled={isSuggestingCat} className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 cursor-pointer">
+                      ✨ {isSuggestingCat ? 'Підбираю...' : 'Авто-підбір'}
+                    </button>
+                  </div>
                   <select value={formData.category_id} onChange={e => setFormData({...formData, category_id: e.target.value})} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2 text-white" required>
                     <option value="">Виберіть...</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -245,7 +285,12 @@ export default function Products() {
                   <input type="number" step="0.01" value={formData.promo_price} onChange={e => setFormData({...formData, promo_price: e.target.value})} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2 text-white" disabled={!formData.is_promo} required={formData.is_promo} />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm text-neutral-400 mb-1">Опис</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-sm text-neutral-400">Опис</label>
+                    <button type="button" onClick={handleGenerateDescription} disabled={isGeneratingDesc} className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 cursor-pointer">
+                      ✨ {isGeneratingDesc ? 'Генерую...' : 'Згенерувати ШІ'}
+                    </button>
+                  </div>
                   <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2 h-24 text-white" />
                 </div>
                 <div className="flex items-center gap-2">

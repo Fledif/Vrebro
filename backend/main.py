@@ -11,7 +11,7 @@ from models.base import Base
 import models.product
 import models.order
 import models.user
-from routers import admin, catalog, orders
+from routers import admin, catalog, orders, ai
 
 import asyncio
 from bot import bot, dp
@@ -44,6 +44,7 @@ app.add_middleware(
 )
 
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
+app.include_router(ai.router, prefix="/api/admin/ai", tags=["ai"])
 app.include_router(catalog.router, prefix="/api/catalog", tags=["catalog"])
 app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
 

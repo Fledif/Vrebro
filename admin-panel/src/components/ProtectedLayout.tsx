@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import AiChatWidget from './AiChatWidget';
 
 export default function ProtectedLayout() {
   const token = localStorage.getItem('admin_token');
@@ -14,6 +15,7 @@ export default function ProtectedLayout() {
       <div className="ml-64 p-8">
         <Outlet />
       </div>
+      <AiChatWidget />
     </div>
   );
 }
