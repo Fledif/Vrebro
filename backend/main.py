@@ -64,6 +64,22 @@ async def lifespan(app: FastAPI):
     # Initialize DB
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        
+        # Run safe migrations for both SQLite and PostgreSQL
+        from sqlalchemy import text
+        migration_queries = [
+            "ALTER TABLE products ADD COLUMN is_promo BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE products ADD COLUMN promo_price FLOAT",
+            "ALTER TABLE products ADD COLUMN is_weighted BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE products ADD COLUMN weight_step INTEGER",
+            "ALTER TABLE orders ADD COLUMN delivery_cost FLOAT DEFAULT 0.0"
+        ]
+        for query in migration_queries:
+            try:
+                await conn.execute(text(query))
+            except Exception as e:
+                # Column likely already exists
+                pass
     
     if bot:
         render_url = os.getenv("RENDER_EXTERNAL_URL")
