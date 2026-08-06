@@ -20,7 +20,7 @@ class OrderStatusUpdate(BaseModel):
 
 class OrderItemSchema(BaseModel):
     id: int
-    product_id: int
+    product_id: Optional[int] = None
     quantity: float
     price_at_purchase: float
     product: Optional[ProductSchema] = None

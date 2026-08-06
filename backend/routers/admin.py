@@ -43,7 +43,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     access_token = create_access_token(data={"sub": form_data.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 from models.user import User
 
 @protected_router.post("/purge")
@@ -204,6 +204,9 @@ async def delete_product(id: int, db: AsyncSession = Depends(get_db)):
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
         
+    # Unlink from any order items to prevent Foreign Key constraints error
+    await db.execute(update(OrderItem).where(OrderItem.product_id == id).values(product_id=None))
+    
     await db.delete(product)
     await db.commit()
     return None
