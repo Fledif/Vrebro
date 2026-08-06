@@ -55,9 +55,9 @@ async def call_groq(messages: list, model: str = "llama-3.1-8b-instant", tempera
 
 @router.post("/generate-description")
 async def generate_description(req: DescriptionRequest):
-    prompt = f"Згенеруй короткий, привабливий та продаючий опис для товару '{req.name}' в інтернет-магазин. Використовуй емодзі. Максимум 3-4 речення. Тільки опис, нічого зайвого."
+    prompt = f"Згенеруй короткий, привабливий та смачний опис для товару '{req.name}' в інтернет-магазин. Використовуй емодзі. Максимум 3-4 речення. Тільки опис, нічого зайвого."
     messages = [
-        {"role": "system", "content": "Ти професійний копірайтер для стильного молодіжного бренду одягу та аксесуарів."},
+        {"role": "system", "content": "Ти професійний копірайтер для магазину крафтової їжі, який продає варених раків, м'ясні делікатеси, морепродукти та закуски. Твоя ціль - викликати апетит у покупця."},
         {"role": "user", "content": prompt}
     ]
     description = await call_groq(messages)
