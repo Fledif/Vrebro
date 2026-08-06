@@ -67,7 +67,7 @@ export const fetchUserOrders = async (userId: number): Promise<any[]> => {
 };
 
 export const fetchPaymentCard = async (): Promise<string> => {
-  const { data } = await api.get('/settings/payment_card');
+  const { data } = await api.get('/admin/settings/payment_card');
   return data.card_number;
 };
 

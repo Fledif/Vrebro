@@ -13,7 +13,7 @@ export default function Settings() {
     // But let's only fetch when unlocked for security if preferred. Actually our GET route is public.
     const fetchCard = async () => {
       try {
-        const res = await api.get('/settings/payment_card');
+        const res = await api.get('/admin/settings/payment_card');
         setCardNumber(res.data.card_number);
       } catch (err) {
         console.error("Failed to fetch card", err);

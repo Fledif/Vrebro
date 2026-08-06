@@ -50,11 +50,12 @@ export default function Checkout() {
       setLoading(true);
       
       const orderPayload: OrderCreate = {
-        user_id: WebApp.initDataUnsafe?.user?.id || 1, // Fallback to 1 for testing outside Telegram
+        user_id: WebApp.initDataUnsafe?.user?.id || 1,
         customer_name: formData.name,
         phone: formData.phone,
         address: formData.address,
-        comment: formData.comment,
+        comment: formData.comment || "",
+        total_price: getTotalPrice(),
         items: items.map(item => ({
           product_id: item.product.id,
           quantity: item.quantity
