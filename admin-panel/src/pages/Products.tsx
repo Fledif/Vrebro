@@ -24,6 +24,7 @@ export default function Products() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -74,6 +75,39 @@ export default function Products() {
       });
     }
     setIsModalOpen(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
+    if (!apiKey) {
+      alert("Не налаштовано VITE_IMGBB_API_KEY у файлі .env (або .env.local)");
+      return;
+    }
+
+    setIsUploading(true);
+    const data = new FormData();
+    data.append('image', file);
+
+    try {
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+        method: 'POST',
+        body: data
+      });
+      const json = await res.json();
+      if (json.success) {
+        setFormData(prev => ({...prev, image_url: json.data.url}));
+      } else {
+        alert("Помилка ImgBB: " + json.error?.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Не вдалося завантажити фото");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -185,8 +219,22 @@ export default function Products() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-neutral-400 mb-1">URL Фото</label>
-                  <input type="url" value={formData.image_url} onChange={e => setFormData({...formData, image_url: e.target.value})} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2 text-white" required />
+                  <label className="block text-sm text-neutral-400 mb-1">Фото товару</label>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={isUploading}
+                        className="block w-full text-sm text-neutral-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-neutral-800 file:text-white hover:file:bg-neutral-700 cursor-pointer"
+                      />
+                      {isUploading && <span className="text-xs text-orange-400">Завантаження...</span>}
+                    </div>
+                    {formData.image_url && (
+                      <img src={formData.image_url} alt="Preview" className="h-16 w-16 rounded-lg object-cover border border-neutral-800" />
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm text-neutral-400 mb-1">Базова ціна (грн)</label>
