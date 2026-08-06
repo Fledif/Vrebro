@@ -1,5 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
 from contextlib import asynccontextmanager
 from database import engine
 from models.base import Base
@@ -44,9 +47,25 @@ app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(catalog.router, prefix="/api/catalog", tags=["catalog"])
 app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
 
-@app.get("/")
-async def root():
-    return {"status": "ok", "message": "Unified Backend is running"}
+frontend_path = os.path.join(os.path.dirname(__file__), "..", "admin-panel", "dist")
+
+if os.path.exists(os.path.join(frontend_path, "assets")):
+    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="assets")
+
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="API route not found")
+    
+    file_path = os.path.join(frontend_path, full_path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return FileResponse(file_path)
+    
+    index_path = os.path.join(frontend_path, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+        
+    return {"status": "ok", "message": "Unified Backend is running (Frontend build not found)"}
 
 if __name__ == "__main__":
     import uvicorn
