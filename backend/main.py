@@ -21,6 +21,7 @@ async def lifespan(app: FastAPI):
     
     bot_task = None
     if bot:
+        await bot.delete_webhook(drop_pending_updates=True)
         bot_task = asyncio.create_task(dp.start_polling(bot))
         print("Telegram Bot started!")
         
