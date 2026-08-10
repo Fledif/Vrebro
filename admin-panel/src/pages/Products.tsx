@@ -43,9 +43,7 @@ export default function Products() {
       alert("Помилка видалення товару");
     }
   };
-  const [isUploading, setIsUploading] = useState(false);
-  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
-  const [isSuggestingCat, setIsSuggestingCat] = useState(false);
+
   
   const [formData, setFormData] = useState({
     name: '',
