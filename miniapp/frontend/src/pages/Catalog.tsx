@@ -85,8 +85,14 @@ export default function Catalog() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-orange"></div>
+        <div className="flex justify-center items-center py-24 animate-pulse">
+          <div className="flex flex-col items-start font-black italic tracking-tighter transform -rotate-3 scale-125 select-none">
+            <div className="text-white text-4xl leading-[0.8] drop-shadow-lg ml-3 relative z-10" style={{ WebkitTextStroke: '1.5px #7f1d1d' }}>В</div>
+            <div className="flex items-baseline">
+              <span className="text-white text-5xl leading-none drop-shadow-lg mr-1 relative z-10" style={{ WebkitTextStroke: '2px #7f1d1d' }}>Ре</span>
+              <span className="text-6xl text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-orange-500 to-red-700 leading-none drop-shadow-[0_0_15px_rgba(220,38,38,0.8)]" style={{ WebkitTextStroke: '1px #991b1b', textShadow: '2px 2px 0 #7f1d1d, 4px 4px 10px rgba(220,38,38,0.5)' }}>БРО</span>
+            </div>
+          </div>
         </div>
       ) : error ? (
         <div className="flex flex-col items-center py-12 bg-gray-900 rounded-2xl border border-gray-800 p-6">
