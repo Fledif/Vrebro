@@ -28,7 +28,9 @@ export default function MyOrders() {
   const [paymentCard, setPaymentCard] = useState('');
 
   useEffect(() => {
-    const loadData = async () => {
+    let intervalId: ReturnType<typeof setInterval>;
+
+    const loadData = async (showLoading = true) => {
       try {
         let userId = 1; // Default for testing outside telegram
         if (WebApp && WebApp.initDataUnsafe?.user?.id) {
@@ -44,10 +46,19 @@ export default function MyOrders() {
       } catch (err) {
         console.error(err);
       } finally {
-        setLoading(false);
+        if (showLoading) setLoading(false);
       }
     };
-    loadData();
+    
+    // Initial load
+    loadData(true);
+
+    // Poll every 10 seconds for background updates
+    intervalId = setInterval(() => {
+      loadData(false);
+    }, 10000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   if (loading) {
