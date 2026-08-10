@@ -31,6 +31,12 @@ export interface Product {
   price: number;
   image_url?: string;
   is_active: boolean;
+  is_promo?: boolean;
+  promo_price?: number;
+  is_weighted?: boolean;
+  weight_step?: number;
+  stock_quantity?: number | null;
+  is_out_of_stock?: boolean;
 }
 
 export interface OrderItemCreate {

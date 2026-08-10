@@ -26,7 +26,9 @@ class Product(Base):
     is_promo = Column(Boolean, default=False)
     promo_price = Column(Float, nullable=True)
     is_weighted = Column(Boolean, default=False)
-    weight_step = Column(Integer, nullable=True)
+    weight_step = Column(Integer, nullable=True) # in grams
+    stock_quantity = Column(Float, nullable=True) # null means unlimited
+    is_out_of_stock = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     category = relationship("Category", back_populates="products")

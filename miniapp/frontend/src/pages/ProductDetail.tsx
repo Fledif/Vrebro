@@ -109,14 +109,23 @@ export default function ProductDetail() {
 
         {/* Add to Cart Section */}
         <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 flex items-center justify-between">
-          <button 
-            onClick={() => {
-              addItem(product);
-            }}
-            className="w-full py-4 bg-gradient-to-r from-brand-orange to-red-500 rounded-xl font-black text-lg text-white shadow-lg shadow-brand-orange/20 active:scale-[0.98] transition-transform"
-          >
-            ДОДАТИ В КОШИК
-          </button>
+          {product.is_out_of_stock || (product.stock_quantity !== null && product.stock_quantity !== undefined && product.stock_quantity <= 0) ? (
+            <button 
+              disabled
+              className="w-full py-4 bg-gray-800 rounded-xl font-black text-lg text-red-500 shadow-lg shadow-red-500/10 cursor-not-allowed"
+            >
+              НЕМАЄ В НАЯВНОСТІ
+            </button>
+          ) : (
+            <button 
+              onClick={() => {
+                addItem(product);
+              }}
+              className="w-full py-4 bg-gradient-to-r from-brand-orange to-red-500 rounded-xl font-black text-lg text-white shadow-lg shadow-brand-orange/20 active:scale-[0.98] transition-transform"
+            >
+              ДОДАТИ В КОШИК
+            </button>
+          )}
         </div>
       </div>
     </div>

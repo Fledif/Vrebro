@@ -44,12 +44,17 @@ export default function ProductCard({ product }: ProductCardProps) {
               грн
             </span>
           </div>
-          <button 
-            onClick={handleAddToCart}
-            className="w-8 h-8 rounded-full bg-brand-orange text-white flex items-center justify-center font-bold text-lg hover:bg-orange-500 active:scale-95 transition-transform"
-          >
-            +
-          </button>
+          
+          {product.is_out_of_stock || (product.stock_quantity !== null && product.stock_quantity !== undefined && product.stock_quantity <= 0) ? (
+            <span className="text-xs font-bold text-red-500 bg-red-500/10 px-2 py-1 rounded-lg">Немає</span>
+          ) : (
+            <button 
+              onClick={handleAddToCart}
+              className="w-8 h-8 rounded-full bg-brand-orange text-white flex items-center justify-center font-bold text-lg hover:bg-orange-500 active:scale-95 transition-transform"
+            >
+              +
+            </button>
+          )}
         </div>
       </div>
     </div>

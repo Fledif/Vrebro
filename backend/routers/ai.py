@@ -110,3 +110,57 @@ async def ai_chat(req: ChatRequest, db: AsyncSession = Depends(get_db)):
     
     reply = await call_groq(messages)
     return {"reply": reply}
+
+from fastapi import UploadFile, File
+
+@router.post("/process-image")
+async def process_image_ai(image: UploadFile = File(...)):
+    if not settings.PHOTOROOM_API_KEY:
+        raise HTTPException(status_code=400, detail="PHOTOROOM_API_KEY is not configured on the server")
+        
+    image_bytes = await image.read()
+    
+    async with httpx.AsyncClient() as client:
+        # Step 1: Send to Photoroom for AI Processing
+        # We use Photoroom v2 edit API with a prompt for a good background
+        # Note: If the user just wants background removal, we could use /v1/segment,
+        # but to add a nice background we use /v2/edit
+        
+        pr_files = {'imageFile': (image.filename, image_bytes, image.content_type)}
+        pr_data = {
+            'background.prompt': 'A professional high-quality food photography of a product on a rustic dark wooden table with cinematic lighting',
+            'padding': '0.1'
+        }
+        
+        pr_res = await client.post(
+            "https://image-api.photoroom.com/v2/edit",
+            headers={"x-api-key": settings.PHOTOROOM_API_KEY},
+            files=pr_files,
+            data=pr_data,
+            timeout=60.0
+        )
+        
+        if pr_res.status_code != 200:
+            raise HTTPException(status_code=500, detail=f"Photoroom API Error: {pr_res.text}")
+            
+        processed_image_bytes = pr_res.content
+        
+        # Step 2: Upload the processed image to ImgBB
+        if not settings.IMGBB_API_KEY:
+            raise HTTPException(status_code=500, detail="IMGBB_API_KEY is missing for final upload")
+            
+        imgbb_files = {'image': ("ai_processed_" + image.filename, processed_image_bytes, image.content_type)}
+        imgbb_res = await client.post(
+            f"https://api.imgbb.com/1/upload?key={settings.IMGBB_API_KEY}",
+            files=imgbb_files,
+            timeout=30.0
+        )
+        
+        if imgbb_res.status_code != 200:
+            raise HTTPException(status_code=500, detail=f"ImgBB error: {imgbb_res.text}")
+            
+        data = imgbb_res.json()
+        if data.get("success"):
+            return {"url": data["data"]["url"]}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to upload AI image to ImgBB")

@@ -26,7 +26,16 @@ async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_d
         if not product:
             raise HTTPException(status_code=404, detail=f"Product {item.product_id} not found")
         if not product.is_active:
-            raise HTTPException(status_code=400, detail=f"Product {item.product_id} is inactive")
+            raise HTTPException(status_code=400, detail=f"Product {product.name} is inactive")
+        if product.is_out_of_stock:
+            raise HTTPException(status_code=400, detail=f"Товар {product.name} закінчився")
+        
+        # Check stock quantity if it's set
+        if product.stock_quantity is not None:
+            if item.quantity > product.stock_quantity:
+                raise HTTPException(status_code=400, detail=f"Недостатньо товару {product.name}. В наявності: {product.stock_quantity}")
+            # Deduct stock
+            product.stock_quantity -= item.quantity
             
         actual_price = product.promo_price if product.is_promo and product.promo_price is not None else product.price
         validated_items.append({
