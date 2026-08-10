@@ -41,10 +41,6 @@ export default function Checkout() {
       setError("Введіть коректний номер телефону");
       return;
     }
-    if (formData.address.trim().length < 5) {
-      setError("Введіть повну адресу доставки");
-      return;
-    }
 
     try {
       setLoading(true);
@@ -53,7 +49,7 @@ export default function Checkout() {
         user_id: WebApp.initDataUnsafe?.user?.id || 1,
         customer_name: formData.name,
         phone: formData.phone,
-        address: formData.address,
+        address: "Самовивіз (На винос)",
         comment: formData.comment || "",
         total_price: getTotalPrice(),
         items: items.map(item => ({
@@ -137,15 +133,13 @@ export default function Checkout() {
         </div>
 
         <div>
-          <label className="block text-sm font-bold text-gray-400 mb-1 ml-1">Адреса доставки</label>
-          <input 
-            type="text" 
-            name="address"
-            value={formData.address}
-            onChange={handleChange}
-            placeholder="Вулиця, будинок, квартира"
-            className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-brand-orange transition-colors"
-          />
+          <label className="block text-sm font-bold text-gray-400 mb-1 ml-1">Спосіб доставки</label>
+          <div className="w-full bg-gray-900 border border-brand-orange/30 rounded-xl px-4 py-3 text-brand-orange font-bold flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+            Тільки на винос (Самовивіз)
+          </div>
         </div>
 
         <div>
