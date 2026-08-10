@@ -63,7 +63,7 @@ export default function ProductDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24">
+    <div className="min-h-screen bg-transparent text-white pb-24 relative z-10">
       {/* Header with Back Button */}
       <div className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center p-4 bg-gradient-to-b from-black/80 to-transparent">
         <button 
@@ -76,23 +76,24 @@ export default function ProductDetail() {
         </button>
       </div>
 
-      <div className="relative h-80 w-full bg-gray-900 flex items-center justify-center overflow-hidden">
+      <div className="relative h-96 w-full flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--color-brand-dark)] z-10" />
         {product.image_url ? (
-          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover relative z-0" />
         ) : (
           <span className="text-gray-500">Фото відсутнє</span>
         )}
       </div>
 
       {/* Product Info */}
-      <div className="px-4 -mt-10 relative z-10">
+      <div className="px-4 -mt-16 relative z-20">
         <div className="flex justify-between items-end mb-2">
         </div>
         
-        <h1 className="text-3xl font-black mb-2 leading-tight">{product.name}</h1>
+        <h1 className="text-3xl font-black mb-2 leading-tight drop-shadow-lg">{product.name}</h1>
         
         <div className="flex items-end gap-2 mb-6">
-          <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-brand-orange to-red-500">
+          <span className="text-4xl font-black text-white text-glow drop-shadow-[0_0_15px_rgba(255,81,0,0.8)]">
             {product.price.toLocaleString('uk-UA')}
           </span>
           <span className="text-xl text-gray-400 mb-1">
@@ -100,19 +101,19 @@ export default function ProductDetail() {
           </span>
         </div>
 
-        <div className="bg-gray-900 rounded-2xl p-4 mb-6 border border-gray-800">
-          <h3 className="font-bold text-gray-300 mb-2">Опис</h3>
-          <p className="text-gray-400 text-sm leading-relaxed whitespace-pre-wrap">
+        <div className="glass-panel rounded-2xl p-4 mb-6">
+          <h3 className="font-bold text-orange-200/80 mb-2">Опис</h3>
+          <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
             {product.description || "Опис відсутній"}
           </p>
         </div>
 
         {/* Add to Cart Section */}
-        <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 flex items-center justify-between">
+        <div className="glass-panel rounded-2xl p-4 flex items-center justify-between">
           {product.is_out_of_stock || (product.stock_quantity !== null && product.stock_quantity !== undefined && product.stock_quantity <= 0) ? (
             <button 
               disabled
-              className="w-full py-4 bg-gray-800 rounded-xl font-black text-lg text-red-500 shadow-lg shadow-red-500/10 cursor-not-allowed"
+              className="w-full py-4 bg-black/50 rounded-xl font-black text-lg text-red-500 backdrop-blur-sm border border-red-500/20 shadow-[0_0_15px_rgba(220,38,38,0.2)] cursor-not-allowed"
             >
               НЕМАЄ В НАЯВНОСТІ
             </button>
@@ -121,7 +122,7 @@ export default function ProductDetail() {
               onClick={() => {
                 addItem(product);
               }}
-              className="w-full py-4 bg-gradient-to-r from-brand-orange to-red-500 rounded-xl font-black text-lg text-white shadow-lg shadow-brand-orange/20 active:scale-[0.98] transition-transform"
+              className="w-full py-4 bg-gradient-to-r from-orange-600 to-orange-400 rounded-xl font-black text-lg text-white shadow-[0_0_20px_rgba(255,81,0,0.4)] active:scale-[0.98] transition-all border border-orange-300/30 hover:shadow-[0_0_30px_rgba(255,81,0,0.6)]"
             >
               ДОДАТИ В КОШИК
             </button>

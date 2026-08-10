@@ -1,12 +1,40 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-orange: #F97316;
-  --color-brand-red: #DC2626;
-  --color-brand-dark: #111111;
-  --color-brand-gray: #222222;
+  --color-brand-orange: #FF5100;
+  --color-brand-red: #D10000;
+  --color-brand-dark: #0A0A0A;
+  --color-brand-gray: #1A1A1A;
 }
+
 body {
-  background-color: #111111;
+  background-color: var(--color-brand-dark);
   color: white;
+  min-height: 100vh;
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  
+  /* Charcoal & Fire Ember Background */
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(255, 81, 0, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(209, 0, 0, 0.15) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+  background-attachment: fixed;
+  background-size: cover, cover, 150px 150px;
 }
+
+/* Glassmorphism Utilities */
+@layer utilities {
+  .glass-panel {
+    @apply bg-black/40 backdrop-blur-md border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)];
+  }
+  
+  .glass-panel-hover {
+    @apply hover:bg-black/60 hover:border-orange-500/30 hover:shadow-[0_8px_32px_0_rgba(255,81,0,0.2)] transition-all duration-300;
+  }
+  
+  .text-glow {
+    text-shadow: 0 0 10px rgba(255, 81, 0, 0.5);
+  }
+}
+
