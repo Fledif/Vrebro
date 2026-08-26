@@ -48,22 +48,20 @@ export default function Catalog() {
   };
 
   return (
-    <div className="pb-24 pt-4 px-4 min-h-screen bg-transparent relative z-10">
-      <div className="flex justify-between items-end mb-6">
-        <div>
-          <h1 className="text-3xl font-black text-white leading-none text-glow">Меню</h1>
-          <p className="text-orange-200/60 text-sm mt-1">Оберіть найсмачніше</p>
-        </div>
+    <div className="pb-24 pt-4 px-4 min-h-screen">
+      <div className="mb-5">
+        <h1 className="text-2xl font-black text-white">Меню</h1>
+        <p className="text-gray-500 text-sm mt-0.5">Оберіть найсмачніше</p>
       </div>
 
-      {/* Categories Horizontal Scroll */}
-      <div className="flex overflow-x-auto hide-scrollbar gap-3 mb-6 pb-2 -mx-4 px-4">
+      {/* Category Pills */}
+      <div className="flex overflow-x-auto hide-scrollbar gap-2 mb-5 pb-1 -mx-4 px-4">
         <button
           onClick={() => handleCategoryClick(null)}
-          className={`px-5 py-2 rounded-full whitespace-nowrap text-sm font-bold transition-all backdrop-blur-md border ${
+          className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-bold transition-all border ${
             activeCategory === null
-              ? 'bg-orange-500/80 text-white border-orange-400 shadow-[0_0_15px_rgba(255,81,0,0.5)]'
-              : 'bg-black/30 text-gray-300 border-white/10 hover:bg-black/50'
+              ? 'bg-gradient-to-r from-brand-orange to-brand-red text-white border-transparent shadow-[0_2px_12px_rgba(255,81,0,0.3)]'
+              : 'bg-brand-charcoal text-gray-400 border-white/6 active:bg-white/10'
           }`}
         >
           Усі
@@ -72,10 +70,10 @@ export default function Catalog() {
           <button
             key={cat.id}
             onClick={() => handleCategoryClick(cat.id)}
-            className={`px-5 py-2 rounded-full whitespace-nowrap text-sm font-bold transition-all flex items-center gap-2 backdrop-blur-md border ${
+            className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-bold transition-all flex items-center gap-1.5 border ${
               activeCategory === cat.id
-                ? 'bg-orange-500/80 text-white border-orange-400 shadow-[0_0_15px_rgba(255,81,0,0.5)]'
-                : 'bg-black/30 text-gray-300 border-white/10 hover:bg-black/50'
+                ? 'bg-gradient-to-r from-brand-orange to-brand-red text-white border-transparent shadow-[0_2px_12px_rgba(255,81,0,0.3)]'
+                : 'bg-brand-charcoal text-gray-400 border-white/6 active:bg-white/10'
             }`}
           >
             {cat.icon && <span>{cat.icon}</span>}
@@ -84,33 +82,28 @@ export default function Catalog() {
         ))}
       </div>
 
+      {/* Products */}
       {loading ? (
-        <div className="flex justify-center items-center py-24 animate-pulse">
-          <div className="flex flex-col items-start font-black italic tracking-tighter transform -rotate-3 scale-125 select-none">
-            <div className="text-white text-4xl leading-[0.8] drop-shadow-lg ml-3 relative z-10" style={{ WebkitTextStroke: '1.5px #7f1d1d' }}>В</div>
-            <div className="flex items-baseline -mt-1">
-              <span className="text-white text-5xl leading-none drop-shadow-lg relative z-10" style={{ WebkitTextStroke: '2px #7f1d1d' }}>Ре</span>
-              <span className="text-6xl text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-orange-500 to-red-700 leading-none drop-shadow-[0_0_15px_rgba(220,38,38,0.8)]" style={{ WebkitTextStroke: '1px #991b1b', textShadow: '2px 2px 0 #7f1d1d, 4px 4px 10px rgba(220,38,38,0.5)' }}>БРО</span>
-            </div>
-          </div>
+        <div className="flex justify-center items-center py-20">
+          <div className="w-10 h-10 border-2 border-brand-orange/30 border-t-brand-orange rounded-full animate-spin" />
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center py-12 bg-gray-900 rounded-2xl border border-gray-800 p-6">
-          <span className="text-gray-400 mb-6">{error}</span>
+        <div className="flex flex-col items-center py-12 glass-card rounded-2xl p-6">
+          <span className="text-gray-400 mb-4">{error}</span>
           <button 
             onClick={activeCategory === null ? loadData : () => handleCategoryClick(activeCategory)}
-            className="px-8 py-3 bg-gray-800 text-brand-orange rounded-full font-bold border border-gray-700 active:scale-95 transition-transform text-lg"
+            className="btn-secondary text-sm"
           >
             Спробувати ще раз
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
           {products.length === 0 && (
-            <div className="col-span-2 text-center text-gray-500 py-8">
+            <div className="col-span-2 text-center text-gray-500 py-12">
               Товарів не знайдено
             </div>
           )}

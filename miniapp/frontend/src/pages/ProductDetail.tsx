@@ -32,102 +32,91 @@ export default function ProductDetail() {
     loadData();
   }, [loadData]);
 
+  const isOutOfStock = product?.is_out_of_stock || 
+    (product?.stock_quantity !== null && product?.stock_quantity !== undefined && product?.stock_quantity <= 0);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex justify-center items-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-orange"></div>
+      <div className="min-h-screen flex justify-center items-center">
+        <div className="w-10 h-10 border-2 border-brand-orange/30 border-t-brand-orange rounded-full animate-spin" />
       </div>
     );
   }
 
   if (error || !product) {
     return (
-      <div className="min-h-screen bg-black flex flex-col justify-center items-center text-white px-4">
+      <div className="min-h-screen flex flex-col justify-center items-center text-white px-4">
         <p className="text-gray-400 mb-6">{error || 'Товар не знайдено'}</p>
-        <div className="flex gap-4">
-          <button 
-            onClick={loadData} 
-            className="px-6 py-2 bg-gray-800 text-brand-orange rounded-full font-bold border border-gray-700 active:scale-95 transition-transform"
-          >
-            Спробувати ще раз
-          </button>
-          <button 
-            onClick={() => navigate(-1)} 
-            className="px-6 py-2 bg-brand-orange text-white rounded-full font-bold active:scale-95 transition-transform"
-          >
-            Повернутися
-          </button>
+        <div className="flex gap-3">
+          <button onClick={loadData} className="btn-secondary text-sm">Спробувати ще раз</button>
+          <button onClick={() => navigate(-1)} className="btn-primary text-sm">Повернутися</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-transparent text-white pb-24 relative z-10">
-      {/* Header with Back Button */}
-      <div className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center p-4 bg-gradient-to-b from-black/80 to-transparent">
+    <div className="min-h-screen text-white pb-24">
+      {/* Back Button */}
+      <div className="fixed top-0 left-0 right-0 z-50 flex items-center p-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
         <button 
           onClick={() => navigate(-1)}
-          className="bg-black/50 backdrop-blur-md p-2 rounded-full border border-gray-700/50"
+          className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center border border-white/10"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
       </div>
 
-      <div className="relative h-96 w-full flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--color-brand-dark)] z-10" />
+      {/* Product Image */}
+      <div className="relative h-80 w-full overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#0A0A0A] z-10" />
         {product.image_url ? (
-          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover relative z-0" />
+          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
         ) : (
-          <span className="text-gray-500">Фото відсутнє</span>
+          <div className="w-full h-full bg-brand-charcoal flex items-center justify-center">
+            <span className="text-gray-600">Фото відсутнє</span>
+          </div>
         )}
       </div>
 
-      {/* Product Info */}
-      <div className="px-4 -mt-16 relative z-20">
-        <div className="flex justify-between items-end mb-2">
-        </div>
+      {/* Info */}
+      <div className="px-4 -mt-12 relative z-20">
+        <h1 className="text-2xl font-black mb-2 leading-tight">{product.name}</h1>
         
-        <h1 className="text-3xl font-black mb-2 leading-tight drop-shadow-lg">{product.name}</h1>
-        
-        <div className="flex items-end gap-2 mb-6">
-          <span className="text-4xl font-black text-white text-glow drop-shadow-[0_0_15px_rgba(255,81,0,0.8)]">
+        <div className="flex items-end gap-1.5 mb-5">
+          <span className="text-3xl font-black text-brand-orange text-glow-orange">
             {product.price.toLocaleString('uk-UA')}
           </span>
-          <span className="text-xl text-gray-400 mb-1">
-            грн
-          </span>
+          <span className="text-lg text-gray-500 mb-0.5">грн</span>
         </div>
 
-        <div className="glass-panel rounded-2xl p-4 mb-6">
-          <h3 className="font-bold text-orange-200/80 mb-2">Опис</h3>
-          <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
-            {product.description || "Опис відсутній"}
-          </p>
-        </div>
+        {product.description && (
+          <div className="glass-card rounded-2xl p-4 mb-5">
+            <h3 className="font-bold text-gray-400 text-xs uppercase tracking-wider mb-2">Опис</h3>
+            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
+              {product.description}
+            </p>
+          </div>
+        )}
 
-        {/* Add to Cart Section */}
-        <div className="glass-panel rounded-2xl p-4 flex items-center justify-between">
-          {product.is_out_of_stock || (product.stock_quantity !== null && product.stock_quantity !== undefined && product.stock_quantity <= 0) ? (
-            <button 
-              disabled
-              className="w-full py-4 bg-black/50 rounded-xl font-black text-lg text-red-500 backdrop-blur-sm border border-red-500/20 shadow-[0_0_15px_rgba(220,38,38,0.2)] cursor-not-allowed"
-            >
-              НЕМАЄ В НАЯВНОСТІ
-            </button>
-          ) : (
-            <button 
-              onClick={() => {
-                addItem(product);
-              }}
-              className="w-full py-4 bg-gradient-to-r from-orange-600 to-orange-400 rounded-xl font-black text-lg text-white shadow-[0_0_20px_rgba(255,81,0,0.4)] active:scale-[0.98] transition-all border border-orange-300/30 hover:shadow-[0_0_30px_rgba(255,81,0,0.6)]"
-            >
-              ДОДАТИ В КОШИК
-            </button>
-          )}
-        </div>
+        {/* CTA */}
+        {isOutOfStock ? (
+          <button 
+            disabled
+            className="w-full py-4 bg-brand-charcoal rounded-xl font-bold text-base text-red-500/70 border border-red-500/10 cursor-not-allowed"
+          >
+            НЕМАЄ В НАЯВНОСТІ
+          </button>
+        ) : (
+          <button 
+            onClick={() => addItem(product)}
+            className="w-full py-4 btn-primary text-base"
+          >
+            ДОДАТИ В КОШИК
+          </button>
+        )}
       </div>
     </div>
   );

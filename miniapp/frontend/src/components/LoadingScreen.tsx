@@ -12,12 +12,10 @@ export default function LoadingScreen() {
   const [messageIndex, setMessageIndex] = useState(0);
 
   useEffect(() => {
-    // 700ms interval for changing text
     const textInterval = setInterval(() => {
       setMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
     }, 700);
 
-    // Simulate completion after enough time to see all messages
     const loadTimeout = setTimeout(() => {
       setLoading(false);
     }, 2800);
@@ -30,18 +28,20 @@ export default function LoadingScreen() {
 
   return (
     <div className={`loading-screen-overlay ${!loading ? 'loading-screen-hidden' : ''}`}>
-      {/* Ember particles */}
       <div className="ember-container">
-        {[...Array(10)].map((_, i) => (
+        {[...Array(12)].map((_, i) => (
           <div key={i} className="ember" />
         ))}
       </div>
       
       <div className="loading-screen-content">
-        <h1 className="loading-logo">
-          В
-          <span>Ребро</span>
-        </h1>
+        <div className="loading-logo-block">
+          <div className="loading-logo-v">В</div>
+          <div className="loading-logo-rebro">
+            <span className="loading-logo-re">Ре</span>
+            <span className="loading-logo-bro">БРО</span>
+          </div>
+        </div>
         
         <div className="loading-text-container">
           <div key={messageIndex} className="loading-text loading-text-animate">
