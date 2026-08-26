@@ -11,7 +11,8 @@ const statusLabels: Record<string, string> = {
   EDITED: 'Відредаговано',
   PACKING: 'Упаковується',
   SHIPPED: 'Відправлено',
-  CONFIRMED: 'Підтверджено'
+  CONFIRMED: 'Підтверджено',
+  CANCELLED: 'Скасовано'
 };
 
 const statusColors: Record<string, string> = {
@@ -20,7 +21,8 @@ const statusColors: Record<string, string> = {
   EDITED: 'text-brand-orange bg-orange-500/5 border-orange-500/10',
   PACKING: 'text-yellow-500 bg-yellow-500/5 border-yellow-500/10',
   SHIPPED: 'text-purple-400 bg-purple-500/5 border-purple-500/10',
-  CONFIRMED: 'text-green-500 bg-green-500/5 border-green-500/10'
+  CONFIRMED: 'text-green-500 bg-green-500/5 border-green-500/10',
+  CANCELLED: 'text-red-500 bg-red-500/5 border-red-500/10'
 };
 
 export default function MyOrders() {
@@ -162,7 +164,7 @@ export default function MyOrders() {
                 </div>
               </div>
 
-              {order.status !== 'NEW' && order.status !== 'CONFIRMED' && paymentCard?.is_enabled && paymentCard?.card_number && (
+              {order.status !== 'NEW' && order.status !== 'CONFIRMED' && order.status !== 'CANCELLED' && paymentCard?.is_enabled && paymentCard?.card_number && (
                 <div className="mt-3 bg-brand-charcoal p-3 rounded-xl border border-brand-orange/10">
                   <h4 className="text-[11px] font-bold text-brand-orange flex items-center gap-1 mb-2">
                     <CreditCard size={13} /> Оплатіть замовлення:

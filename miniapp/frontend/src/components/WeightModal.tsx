@@ -78,12 +78,12 @@ export default function WeightModal() {
               type="number"
               value={grams}
               onChange={(e) => setGrams(e.target.value)}
-              className="w-full bg-transparent text-white text-2xl font-bold p-4 outline-none text-center"
+              className="w-full bg-transparent text-white text-2xl font-bold py-4 pl-8 pr-2 outline-none text-right"
               placeholder="0"
               autoFocus
             />
-            <div className="bg-neutral-800 px-4 py-4 text-neutral-400 font-bold border-l border-neutral-700">
-              грам
+            <div className="pr-8 py-4 text-neutral-400 font-bold text-xl flex items-center justify-start min-w-[40px]">
+              г
             </div>
           </div>
           {weightModalProduct.weight_step && (

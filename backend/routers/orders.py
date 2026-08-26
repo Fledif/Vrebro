@@ -98,6 +98,15 @@ async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_d
             await bot.send_message(chat_id=settings.ADMIN_CHAT_ID, text=msg, parse_mode="Markdown")
         except Exception as e:
             print(f"Failed to send admin notification: {e}")
+            
+    if bot and new_order.user_id:
+        try:
+            customer_msg = f"✅ Ваше замовлення **{new_order.order_number}** успішно оформлено!\n\n" \
+                           f"💰 Сума до оплати: **{new_order.total_price} грн**\n" \
+                           f"Статус замовлення можна відстежувати у вашому профілі."
+            await bot.send_message(chat_id=new_order.user_id, text=customer_msg, parse_mode="Markdown")
+        except Exception as e:
+            print(f"Failed to send customer notification: {e}")
     
     # Eager load the items for the response
     from sqlalchemy.orm import selectinload
