@@ -29,9 +29,32 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
 
-async def call_groq(messages: list, model: str = "llama-3.1-8b-instant", temperature: float = 0.7):
+async def call_ai(messages: list, model: str = "gpt-4o-mini", temperature: float = 0.7):
+    # Try OpenAI first if available
+    if settings.OPENAI_API_KEY:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": messages,
+                    "temperature": temperature
+                },
+                timeout=30.0
+            )
+            if response.status_code == 200:
+                data = response.json()
+                return data["choices"][0]["message"]["content"]
+            else:
+                print(f"OpenAI fallback to Groq. Error: {response.text}")
+
+    # Fallback to Groq
     if not settings.GROQ_API_KEY:
-        raise HTTPException(status_code=500, detail="GROQ_API_KEY is not set")
+        raise HTTPException(status_code=500, detail="Ані OPENAI_API_KEY, ані GROQ_API_KEY не налаштовано на сервері")
     
     async with httpx.AsyncClient() as client:
         response = await client.post(
@@ -41,14 +64,14 @@ async def call_groq(messages: list, model: str = "llama-3.1-8b-instant", tempera
                 "Content-Type": "application/json"
             },
             json={
-                "model": model,
+                "model": "llama-3.3-70b-versatile",
                 "messages": messages,
                 "temperature": temperature
             },
             timeout=30.0
         )
         if response.status_code != 200:
-            raise HTTPException(status_code=500, detail=f"Groq API Error: {response.text}")
+            raise HTTPException(status_code=500, detail=f"API Error: {response.text}")
         
         data = response.json()
         return data["choices"][0]["message"]["content"]
@@ -60,7 +83,7 @@ async def generate_description(req: DescriptionRequest):
         {"role": "system", "content": "Ти професійний копірайтер для магазину крафтової їжі, який продає варених раків, м'ясні делікатеси, морепродукти та закуски. Твоя ціль - викликати апетит у покупця."},
         {"role": "user", "content": prompt}
     ]
-    description = await call_groq(messages)
+    description = await call_ai(messages)
     return {"description": description}
 
 @router.post("/suggest-category")
@@ -72,7 +95,7 @@ async def suggest_category(req: CategorySuggestRequest):
     messages = [
         {"role": "user", "content": prompt}
     ]
-    category = await call_groq(messages, temperature=0.1)
+    category = await call_ai(messages, temperature=0.1)
     category = category.strip('\'" .').strip()
     return {"category": category}
 
@@ -108,7 +131,7 @@ async def ai_chat(req: ChatRequest, db: AsyncSession = Depends(get_db)):
     
     messages = [system_msg] + [{"role": m.role, "content": m.content} for m in req.messages]
     
-    reply = await call_groq(messages)
+    reply = await call_ai(messages)
     return {"reply": reply}
 
 from fastapi import UploadFile, File
