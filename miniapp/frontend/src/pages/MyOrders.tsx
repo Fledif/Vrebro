@@ -3,6 +3,7 @@ import WebApp from '@twa-dev/sdk';
 import { fetchUserOrders, fetchPaymentCard } from '../api';
 import { Package, CreditCard, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { getUserId } from '../utils/user';
 
 const statusLabels: Record<string, string> = {
   NEW: 'Не розглянуто',
@@ -32,10 +33,7 @@ export default function MyOrders() {
 
     const loadData = async (showLoading = true) => {
       try {
-        let userId = 1;
-        if (WebApp && WebApp.initDataUnsafe?.user?.id) {
-          userId = WebApp.initDataUnsafe.user.id;
-        }
+        const userId = getUserId();
 
         const [ordersData, cardData] = await Promise.all([
           fetchUserOrders(userId),

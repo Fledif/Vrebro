@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 import { useCartStore } from '../store/cartStore';
-import { createOrder, type OrderCreate } from '../api';
+import { createOrder } from '../api';
+import type { OrderCreate } from '../schemas';
+import { getUserId } from '../utils/user';
 
 export default function Checkout() {
   const { items, getTotalPrice, clearCart } = useCartStore();
@@ -44,8 +46,9 @@ export default function Checkout() {
     try {
       setLoading(true);
       
+      const userId = getUserId();
       const orderPayload: OrderCreate = {
-        user_id: WebApp.initDataUnsafe?.user?.id || 1,
+        user_id: userId,
         customer_name: formData.name,
         phone: formData.phone,
         address: "Самовивіз (На винос)",
