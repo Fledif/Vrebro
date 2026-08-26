@@ -25,9 +25,14 @@ ENV/
 
 # Node
 node_modules/
+.npm/
+
+# Build artifacts (general)
 dist/
 build/
-.npm/
+# BUT keep our compiled frontend bundles for Render deployment
+!miniapp/frontend/dist/
+!admin-panel/dist/
 
 # DB
 *.sqlite3
