@@ -26,7 +26,7 @@ const statusColors: Record<string, string> = {
 export default function MyOrders() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [paymentCard, setPaymentCard] = useState('');
+  const [paymentCard, setPaymentCard] = useState<{card_number: string, is_enabled: boolean} | null>(null);
 
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval>;
@@ -115,13 +115,13 @@ export default function MyOrders() {
                 </div>
               </div>
 
-              {order.status !== 'NEW' && order.status !== 'CONFIRMED' && paymentCard && (
+              {order.status !== 'NEW' && order.status !== 'CONFIRMED' && paymentCard?.is_enabled && paymentCard?.card_number && (
                 <div className="mt-3 bg-brand-charcoal p-3 rounded-xl border border-brand-orange/10">
                   <h4 className="text-[11px] font-bold text-brand-orange flex items-center gap-1 mb-2">
                     <CreditCard size={13} /> Оплатіть замовлення:
                   </h4>
                   <div className="text-center font-mono text-base tracking-widest bg-black/40 p-2 rounded-lg border border-white/6 mb-1.5 select-all">
-                    {paymentCard}
+                    {paymentCard.card_number}
                   </div>
                   <p className="text-[10px] text-gray-600 text-center">Після оплати статус зміниться автоматично</p>
                 </div>

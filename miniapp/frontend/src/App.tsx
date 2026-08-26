@@ -6,6 +6,7 @@ import { Home as HomeIcon, LayoutGrid, ShoppingCart, User } from 'lucide-react';
 import clsx from 'clsx';
 import LoadingScreen from './components/LoadingScreen';
 import { useCartStore } from './store/cartStore';
+import WeightModal from './components/WeightModal';
 
 const Catalog = React.lazy(() => import('./pages/Catalog'));
 const ProductDetail = React.lazy(() => import('./pages/ProductDetail'));
@@ -67,6 +68,7 @@ function App() {
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <div className="flex flex-col min-h-screen bg-[#0A0A0A] text-white pb-14 font-sans relative">
         <LoadingScreen />
+        <WeightModal />
         <main className="flex-grow overflow-x-hidden">
           <Suspense fallback={null}>
             <Routes>

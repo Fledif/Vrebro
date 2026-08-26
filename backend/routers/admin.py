@@ -311,11 +311,21 @@ from pydantic import BaseModel
 class PaymentCardUpdate(BaseModel):
     card_number: str
     master_password: str
+    is_enabled: bool = True
 
 @router.get("/settings/payment_card")
 async def get_payment_card(db: AsyncSession = Depends(get_db)):
     setting = await db.get(StoreSettings, "payment_card")
-    return {"card_number": setting.value if setting else ""}
+    enabled_setting = await db.get(StoreSettings, "payment_card_enabled")
+    
+    is_enabled = True
+    if enabled_setting and enabled_setting.value.lower() == "false":
+        is_enabled = False
+        
+    return {
+        "card_number": setting.value if setting else "",
+        "is_enabled": is_enabled
+    }
 
 @protected_router.post("/settings/payment_card")
 async def update_payment_card(data: PaymentCardUpdate, db: AsyncSession = Depends(get_db)):
@@ -328,7 +338,15 @@ async def update_payment_card(data: PaymentCardUpdate, db: AsyncSession = Depend
         db.add(setting)
     else:
         setting.value = data.card_number
+        
+    enabled_setting = await db.get(StoreSettings, "payment_card_enabled")
+    if not enabled_setting:
+        enabled_setting = StoreSettings(key="payment_card_enabled", value=str(data.is_enabled).lower())
+        db.add(enabled_setting)
+    else:
+        enabled_setting.value = str(data.is_enabled).lower()
+        
     await db.commit()
-    return {"status": "success", "card_number": setting.value}
+    return {"status": "success", "card_number": setting.value, "is_enabled": data.is_enabled}
 
 router.include_router(protected_router)

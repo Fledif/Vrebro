@@ -57,7 +57,9 @@ export default function Cart() {
                     onClick={() => decreaseQuantity(product.id)}
                     className="w-6 h-6 flex justify-center items-center text-gray-400 font-bold active:text-white"
                   >−</button>
-                  <span className="font-bold w-4 text-center text-sm">{quantity}</span>
+                  <span className="font-bold min-w-[1rem] px-1 text-center text-sm whitespace-nowrap">
+                    {product.is_weighted ? (quantity >= 1 ? `${quantity} кг` : `${quantity * 1000} г`) : quantity}
+                  </span>
                   <button 
                     onClick={() => increaseQuantity(product.id)}
                     className="w-6 h-6 flex justify-center items-center text-brand-orange font-bold"

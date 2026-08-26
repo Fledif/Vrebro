@@ -9,10 +9,15 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem);
+  const openWeightModal = useCartStore((state) => state.openWeightModal);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
-    addItem(product);
+    if (product.is_weighted) {
+      openWeightModal(product);
+    } else {
+      addItem(product);
+    }
   };
 
   const isOutOfStock = product.is_out_of_stock || 

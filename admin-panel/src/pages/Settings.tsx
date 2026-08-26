@@ -6,6 +6,7 @@ export default function Settings() {
   const [masterPassword, setMasterPassword] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [cardNumber, setCardNumber] = useState('');
+  const [isCardEnabled, setIsCardEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -15,6 +16,7 @@ export default function Settings() {
       try {
         const res = await api.get('/admin/settings/payment_card');
         setCardNumber(res.data.card_number);
+        setIsCardEnabled(res.data.is_enabled !== false);
       } catch (err) {
         console.error("Failed to fetch card", err);
       }
@@ -34,7 +36,8 @@ export default function Settings() {
     try {
       await api.post('/admin/settings/payment_card', {
         card_number: cardNumber,
-        master_password: masterPassword
+        master_password: masterPassword,
+        is_enabled: isCardEnabled
       });
       alert('Збережено успішно!');
     } catch (err: any) {
@@ -92,7 +95,7 @@ export default function Settings() {
           Цей номер картки буде відображатися клієнтам у їхньому боті (міні-аппі), коли статус замовлення перейде в роботу.
         </p>
 
-        <div className="mb-6">
+        <div className="mb-4">
           <label className="block text-sm text-neutral-400 mb-2">Номер банківської картки</label>
           <input 
             type="text"
@@ -101,6 +104,20 @@ export default function Settings() {
             placeholder="0000 0000 0000 0000"
             className="w-full px-4 py-3 bg-[#0a0a0a] border border-neutral-800 rounded-xl focus:outline-none focus:border-brand-orange text-lg tracking-widest font-mono"
           />
+        </div>
+
+        <div className="flex items-center gap-3 mb-8 bg-neutral-900/50 p-4 rounded-xl border border-neutral-800">
+          <input 
+            type="checkbox" 
+            id="isCardEnabled"
+            checked={isCardEnabled}
+            onChange={(e) => setIsCardEnabled(e.target.checked)}
+            className="w-5 h-5 rounded border-neutral-700 bg-neutral-800 accent-brand-orange"
+          />
+          <div className="flex-1">
+            <label htmlFor="isCardEnabled" className="font-bold cursor-pointer text-white block">Відображати картку клієнтам</label>
+            <span className="text-xs text-neutral-500">Якщо вимкнено, картка не буде показуватись клієнтам в деталях замовлення.</span>
+          </div>
         </div>
 
         <button 
