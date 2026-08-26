@@ -64,7 +64,7 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <div className="flex flex-col min-h-screen bg-[#0A0A0A] text-white pb-14 font-sans relative">
         <LoadingScreen />
         <main className="flex-grow overflow-x-hidden">
