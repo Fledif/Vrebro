@@ -27,6 +27,37 @@ export default function MyOrders() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [paymentCard, setPaymentCard] = useState<{card_number: string, is_enabled: boolean} | null>(null);
+  const prevOrdersRef = React.useRef<any[]>([]);
+
+  const playNotificationSound = () => {
+    try {
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+      }
+      
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) return;
+      
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.1);
+      
+      gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.5);
+    } catch (e) {
+      console.error("Audio play failed", e);
+    }
+  };
 
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval>;
@@ -39,6 +70,22 @@ export default function MyOrders() {
           fetchUserOrders(userId),
           fetchPaymentCard()
         ]);
+        
+        // Check for status changes
+        if (prevOrdersRef.current.length > 0) {
+          let hasChange = false;
+          ordersData.forEach((newOrder: any) => {
+            const oldOrder = prevOrdersRef.current.find((o) => o.id === newOrder.id);
+            if (oldOrder && oldOrder.status !== newOrder.status) {
+              hasChange = true;
+            }
+          });
+          if (hasChange) {
+            playNotificationSound();
+          }
+        }
+        prevOrdersRef.current = ordersData;
+        
         setOrders(ordersData);
         setPaymentCard(cardData);
       } catch (err) {
