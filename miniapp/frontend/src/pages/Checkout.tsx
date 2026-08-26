@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
+import toast from 'react-hot-toast';
 import { useCartStore } from '../store/cartStore';
 import { createOrder } from '../api';
 import type { OrderCreate } from '../schemas';
@@ -63,6 +64,10 @@ export default function Checkout() {
       await createOrder(orderPayload);
       setSuccess(true);
       clearCart();
+      toast.success("Переміщено до профілю, там можна переглянути статус замовлення", { duration: 4000 });
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+      }
     } catch (err: any) {
       console.error(err);
       if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
@@ -86,7 +91,8 @@ export default function Checkout() {
           </svg>
         </div>
         <h2 className="text-2xl font-black mb-2">Замовлення прийнято!</h2>
-        <p className="text-gray-500 mb-6 text-sm">Ми зв'яжемося з вами найближчим часом.</p>
+        <p className="text-gray-500 mb-6 text-sm">Переміщено до профілю, там можна переглянути статус.</p>
+        <button onClick={() => navigate('/my-orders')} className="btn-primary w-full mb-3">ДО ПРОФІЛЮ</button>
         <button onClick={() => navigate('/')} className="btn-secondary w-full">НА ГОЛОВНУ</button>
       </div>
     );

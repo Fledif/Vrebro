@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useCartStore } from '../store/cartStore';
 
 export default function WeightModal() {
@@ -29,6 +30,10 @@ export default function WeightModal() {
     // Convert grams to multiplier (e.g. 450g = 0.45kg)
     const quantity = parsedGrams / 1000;
     addItemWithQuantity(weightModalProduct, quantity);
+    toast.success(`${weightModalProduct.name} додано до кошика`);
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+      window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+    }
     closeWeightModal();
   };
 

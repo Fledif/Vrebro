@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { fetchProduct, type Product } from '../api';
 import { useCartStore } from '../store/cartStore';
 
@@ -11,6 +12,7 @@ export default function ProductDetail() {
   const [error, setError] = useState<string | null>(null);
   
   const addItem = useCartStore(state => state.addItem);
+  const openWeightModal = useCartStore(state => state.openWeightModal);
 
   const loadData = useCallback(async () => {
     try {
@@ -34,6 +36,20 @@ export default function ProductDetail() {
 
   const isOutOfStock = product?.is_out_of_stock || 
     (product?.stock_quantity !== null && product?.stock_quantity !== undefined && product?.stock_quantity <= 0);
+
+  const handleAddToCart = () => {
+    if (product) {
+      if (product.is_weighted) {
+        openWeightModal(product);
+      } else {
+        addItem(product);
+        toast.success(`${product.name} додано до кошика`);
+        if (window.Telegram?.WebApp?.HapticFeedback) {
+          window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+        }
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -89,7 +105,7 @@ export default function ProductDetail() {
           <span className="text-3xl font-black text-brand-orange text-glow-orange">
             {product.price.toLocaleString('uk-UA')}
           </span>
-          <span className="text-lg text-gray-500 mb-0.5">грн</span>
+          <span className="text-lg text-gray-500 mb-0.5">грн {product.is_weighted ? '/ кг' : '/ шт'}</span>
         </div>
 
         {product.description && (
@@ -111,7 +127,7 @@ export default function ProductDetail() {
           </button>
         ) : (
           <button 
-            onClick={() => addItem(product)}
+            onClick={handleAddToCart}
             className="w-full py-4 btn-primary text-base"
           >
             ДОДАТИ В КОШИК

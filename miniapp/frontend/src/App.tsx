@@ -1,4 +1,5 @@
 import React, { useEffect, Suspense } from 'react';
+import { Toaster } from 'react-hot-toast';
 import WebApp from '@twa-dev/sdk';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
@@ -69,8 +70,29 @@ function App() {
       <div className="flex flex-col min-h-screen bg-[#0A0A0A] text-white pb-14 font-sans relative">
         <LoadingScreen />
         <WeightModal />
-        <main className="flex-grow overflow-x-hidden">
-          <Suspense fallback={null}>
+        <div className="flex-1 w-full bg-[#0F0F0F] relative">
+        <Toaster 
+          position="top-center"
+          toastOptions={{
+            duration: 2500,
+            style: {
+              background: 'rgba(25, 25, 25, 0.95)',
+              color: '#fff',
+              border: '1px solid rgba(255, 81, 0, 0.2)',
+              backdropFilter: 'blur(10px)',
+              fontWeight: 'bold',
+              fontSize: '13px',
+              padding: '12px 16px',
+            },
+            success: {
+              iconTheme: {
+                primary: '#FF5100',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
+        <Suspense fallback={<LoadingScreen />}>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/catalog" element={<Catalog />} />
@@ -80,7 +102,7 @@ function App() {
               <Route path="/my-orders" element={<MyOrders />} />
             </Routes>
           </Suspense>
-        </main>
+        </div>
         <Navigation />
       </div>
     </BrowserRouter>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import type { Product } from '../api';
 import { useCartStore } from '../store/cartStore';
 
@@ -17,6 +18,10 @@ export default function ProductCard({ product }: ProductCardProps) {
       openWeightModal(product);
     } else {
       addItem(product);
+      toast.success(`${product.name} додано до кошика`);
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+      }
     }
   };
 
@@ -58,7 +63,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             <span className="text-base font-black text-brand-orange">
               {product.price.toLocaleString('uk-UA')}
             </span>
-            <span className="text-[10px] text-gray-500">грн</span>
+            <span className="text-[10px] text-brand-orange/70 font-medium">₴ {product.is_weighted ? '/ кг' : '/ шт'}</span>
           </div>
           
           {!isOutOfStock && (
