@@ -286,9 +286,22 @@ async def update_order_status(id: int, status_update: OrderStatusUpdate, db: Asy
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
         
+    old_status = order.status
     order.status = status_update.status
     if status_update.delivery_cost is not None:
         order.delivery_cost = status_update.delivery_cost
+        
+    # Return stock if cancelled
+    if old_status != "CANCELLED" and order.status == "CANCELLED":
+        for item in order.items:
+            if item.product and item.product.stock_quantity is not None:
+                item.product.stock_quantity += item.quantity
+                
+    # Deduct stock if un-cancelled
+    if old_status == "CANCELLED" and order.status != "CANCELLED":
+        for item in order.items:
+            if item.product and item.product.stock_quantity is not None:
+                item.product.stock_quantity -= item.quantity
         
     await db.commit()
     await db.refresh(order)
