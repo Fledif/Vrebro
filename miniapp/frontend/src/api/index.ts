@@ -85,4 +85,16 @@ export const fetchPaymentCard = async (): Promise<{ card_number: string, is_enab
   return data;
 };
 
+export interface StoreStatus {
+  is_open: boolean;
+  open_time: string;
+  close_time: string;
+  is_enabled: boolean;
+}
+
+export const fetchStoreStatus = async (): Promise<StoreStatus> => {
+  const { data } = await api.get('/catalog/store_status');
+  return data;
+};
+
 export default api;

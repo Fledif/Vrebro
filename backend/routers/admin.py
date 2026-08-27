@@ -313,6 +313,11 @@ class PaymentCardUpdate(BaseModel):
     master_password: str
     is_enabled: bool = True
 
+class StoreHoursUpdate(BaseModel):
+    is_enabled: bool
+    open_time: str
+    close_time: str
+
 @router.get("/settings/payment_card")
 async def get_payment_card(db: AsyncSession = Depends(get_db)):
     setting = await db.get(StoreSettings, "payment_card")
@@ -348,5 +353,36 @@ async def update_payment_card(data: PaymentCardUpdate, db: AsyncSession = Depend
         
     await db.commit()
     return {"status": "success", "card_number": setting.value, "is_enabled": data.is_enabled}
+
+@protected_router.get("/settings/hours")
+async def get_store_hours(db: AsyncSession = Depends(get_db)):
+    enabled_setting = await db.get(StoreSettings, "working_hours_enabled")
+    open_setting = await db.get(StoreSettings, "working_hours_start")
+    close_setting = await db.get(StoreSettings, "working_hours_end")
+    
+    return {
+        "is_enabled": enabled_setting.value.lower() == "true" if enabled_setting else False,
+        "open_time": open_setting.value if open_setting else "10:00",
+        "close_time": close_setting.value if close_setting else "22:00"
+    }
+
+@protected_router.post("/settings/hours")
+async def update_store_hours(data: StoreHoursUpdate, db: AsyncSession = Depends(get_db)):
+    settings_dict = {
+        "working_hours_enabled": str(data.is_enabled).lower(),
+        "working_hours_start": data.open_time,
+        "working_hours_end": data.close_time
+    }
+    
+    for key, value in settings_dict.items():
+        setting = await db.get(StoreSettings, key)
+        if not setting:
+            setting = StoreSettings(key=key, value=value)
+            db.add(setting)
+        else:
+            setting.value = value
+            
+    await db.commit()
+    return {"status": "success"}
 
 router.include_router(protected_router)

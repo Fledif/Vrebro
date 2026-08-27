@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
-import { fetchProducts } from '../api';
-import type { Product } from '../api';
+import { fetchProducts, fetchStoreStatus } from '../api';
+import type { Product, StoreStatus } from '../api';
 import toast from 'react-hot-toast';
 
 export default function Cart() {
   const { items, increaseQuantity, decreaseQuantity, removeItem, getTotalPrice, clearCart, addItem, openWeightModal } = useCartStore();
   const navigate = useNavigate();
   const [crossSellProducts, setCrossSellProducts] = useState<Product[]>([]);
+  const [storeStatus, setStoreStatus] = useState<StoreStatus | null>(null);
+
+  useEffect(() => {
+    fetchStoreStatus().then(setStoreStatus).catch(console.error);
+  }, []);
 
   useEffect(() => {
     const ids = new Set<number>();
@@ -148,10 +153,15 @@ export default function Cart() {
         </div>
         
         <button 
-          onClick={() => navigate('/checkout')}
-          className="w-full py-4 btn-primary text-base"
+          onClick={() => storeStatus?.is_open === false ? toast.error(`Заклад відчиняється о ${storeStatus.open_time}`) : navigate('/checkout')}
+          disabled={storeStatus?.is_open === false}
+          className={`w-full py-4 text-base font-black tracking-wider rounded-2xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2 ${
+            storeStatus?.is_open === false
+              ? "bg-gray-800 text-gray-500 cursor-not-allowed shadow-none"
+              : "bg-brand-orange text-white shadow-brand-orange/20 active:scale-95"
+          }`}
         >
-          ОФОРМИТИ ЗАМОВЛЕННЯ
+          {storeStatus?.is_open === false ? `ЗАЧИНЕНО ДО ${storeStatus.open_time} 😴` : 'ОФОРМИТИ ЗАМОВЛЕННЯ'}
         </button>
       </div>
     </div>
