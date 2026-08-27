@@ -91,7 +91,7 @@ export default function WeightModal() {
               {[100, 250, 500, 1000].map(w => (
                 <button 
                   key={w}
-                  onClick={() => setGrams(w.toString())}
+                  onClick={() => setGrams(prev => ((parseInt(prev) || 0) + w).toString())}
                   className="px-3 py-1.5 text-xs font-medium rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors"
                 >
                   {w >= 1000 ? `${w/1000} кг` : `${w} г`}
