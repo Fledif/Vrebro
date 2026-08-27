@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import WebApp from '@twa-dev/sdk';
-import { fetchUserOrders, fetchPaymentCard } from '../api';
-import { Package, CreditCard, Check } from 'lucide-react';
+import { fetchUserOrders, fetchPaymentCard, fetchCashbackSettings, fetchUserProfile } from '../api';
+import type { CashbackSettings } from '../api';
+import { Package, CreditCard, Check, Gift } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getUserId } from '../utils/user';
 
@@ -36,6 +37,8 @@ export default function MyOrders() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [paymentCard, setPaymentCard] = useState<{card_number: string, is_enabled: boolean} | null>(null);
+  const [cashbackSettings, setCashbackSettings] = useState<CashbackSettings | null>(null);
+  const [userBalance, setUserBalance] = useState(0);
   const prevOrdersRef = React.useRef<any[]>([]);
 
   const playNotificationSound = () => {
@@ -75,10 +78,17 @@ export default function MyOrders() {
       try {
         const userId = getUserId();
 
-        const [ordersData, cardData] = await Promise.all([
+        const [ordersData, cardData, cashbackData] = await Promise.all([
           fetchUserOrders(userId),
-          fetchPaymentCard()
+          fetchPaymentCard(),
+          fetchCashbackSettings()
         ]);
+        
+        if (cashbackData.is_enabled) {
+          const profileData = await fetchUserProfile(userId);
+          setUserBalance(profileData.cashback_balance);
+        }
+        setCashbackSettings(cashbackData);
         
         // Check for status changes
         if (prevOrdersRef.current.length > 0) {
@@ -119,6 +129,21 @@ export default function MyOrders() {
 
   return (
     <div className="p-4 pb-24">
+      {cashbackSettings?.is_enabled && (
+        <div className="bg-gradient-to-r from-brand-orange to-orange-500 rounded-2xl p-5 mb-6 text-white shadow-[0_4px_20px_rgba(255,81,0,0.3)] relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+          <div className="relative z-10">
+            <h2 className="text-sm font-semibold opacity-90 mb-1 flex items-center gap-1.5">
+              <Gift size={16} /> Мій Кешбек
+            </h2>
+            <div className="flex items-end gap-1.5">
+              <span className="text-4xl font-black">{userBalance.toFixed(2)}</span>
+              <span className="text-lg font-bold mb-1 opacity-90">грн</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <h1 className="text-xl font-black mb-5 mt-3">Мої замовлення</h1>
       
       {orders.length === 0 ? (
@@ -181,6 +206,12 @@ export default function MyOrders() {
               </div>
 
               <div className="border-t divider pt-3 space-y-1">
+                {order.cashback_used > 0 && (
+                  <div className="flex justify-between items-center text-brand-orange">
+                    <span className="text-xs font-semibold">Списано бонусів:</span>
+                    <span className="font-bold text-sm">-{order.cashback_used} грн</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-500">Сума:</span>
                   <span className="font-medium text-white text-sm">{order.total_price} грн</span>
@@ -192,9 +223,15 @@ export default function MyOrders() {
                   </div>
                 )}
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-gray-400">Всього:</span>
-                  <span className="font-black text-brand-orange">{order.total_price + (order.delivery_cost || 0)} грн</span>
+                  <span className="text-xs font-bold text-gray-400">Всього до сплати:</span>
+                  <span className="font-black text-brand-orange">{Math.max(0, order.total_price + (order.delivery_cost || 0) - (order.cashback_used || 0))} грн</span>
                 </div>
+                {order.cashback_earned > 0 && (
+                  <div className="flex justify-between items-center mt-1 text-green-500">
+                    <span className="text-xs font-semibold">Буде нараховано бонусів:</span>
+                    <span className="font-bold text-sm">+{order.cashback_earned}</span>
+                  </div>
+                )}
               </div>
 
               {order.status !== 'NEW' && order.status !== 'CONFIRMED' && order.status !== 'CANCELLED' && paymentCard?.is_enabled && paymentCard?.card_number && (

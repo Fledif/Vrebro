@@ -302,6 +302,22 @@ async def update_order_status(id: int, status_update: OrderStatusUpdate, db: Asy
         for item in order.items:
             if item.product and item.product.stock_quantity is not None:
                 item.product.stock_quantity -= item.quantity
+                
+    # Add cashback to user if confirmed
+    if old_status != "CONFIRMED" and order.status == "CONFIRMED":
+        if order.cashback_earned and order.cashback_earned > 0 and order.user_id:
+            from models.user import User
+            user = await db.get(User, order.user_id)
+            if user:
+                user.cashback_balance = (user.cashback_balance or 0.0) + order.cashback_earned
+
+    # Revoke cashback if un-confirmed
+    if old_status == "CONFIRMED" and order.status != "CONFIRMED":
+        if order.cashback_earned and order.cashback_earned > 0 and order.user_id:
+            from models.user import User
+            user = await db.get(User, order.user_id)
+            if user:
+                user.cashback_balance = max(0.0, (user.cashback_balance or 0.0) - order.cashback_earned)
         
     await db.commit()
     await db.refresh(order)
@@ -330,6 +346,11 @@ class StoreHoursUpdate(BaseModel):
     is_enabled: bool
     open_time: str
     close_time: str
+
+class CashbackSettingsUpdate(BaseModel):
+    is_enabled: bool
+    percentage: float
+    max_pay_percent: float
 
 @router.get("/settings/payment_card")
 async def get_payment_card(db: AsyncSession = Depends(get_db)):
@@ -395,6 +416,57 @@ async def update_store_hours(data: StoreHoursUpdate, db: AsyncSession = Depends(
         else:
             setting.value = value
             
+    await db.commit()
+    return {"status": "success"}
+
+@protected_router.get("/settings/cashback")
+async def get_cashback_settings(db: AsyncSession = Depends(get_db)):
+    enabled_setting = await db.get(StoreSettings, "cashback_enabled")
+    percentage_setting = await db.get(StoreSettings, "cashback_percentage")
+    max_pay_setting = await db.get(StoreSettings, "cashback_max_pay_percent")
+    
+    return {
+        "is_enabled": enabled_setting.value.lower() == "true" if enabled_setting else False,
+        "percentage": float(percentage_setting.value) if percentage_setting else 0.0,
+        "max_pay_percent": float(max_pay_setting.value) if max_pay_setting else 100.0
+    }
+
+@protected_router.post("/settings/cashback")
+async def update_cashback_settings(data: CashbackSettingsUpdate, db: AsyncSession = Depends(get_db)):
+    settings_dict = {
+        "cashback_enabled": str(data.is_enabled).lower(),
+        "cashback_percentage": str(data.percentage),
+        "cashback_max_pay_percent": str(data.max_pay_percent)
+    }
+    
+    for key, value in settings_dict.items():
+        setting = await db.get(StoreSettings, key)
+        if not setting:
+            setting = StoreSettings(key=key, value=value)
+            db.add(setting)
+        else:
+            setting.value = value
+            
+    await db.commit()
+    return {"status": "success"}
+
+class UserCashbackUpdate(BaseModel):
+    cashback_balance: float
+
+@protected_router.get("/users")
+async def get_all_users(db: AsyncSession = Depends(get_db)):
+    from models.user import User
+    from sqlalchemy.future import select
+    result = await db.execute(select(User).order_by(User.created_at.desc()))
+    return result.scalars().all()
+
+@protected_router.patch("/users/{user_id}/cashback")
+async def update_user_cashback(user_id: int, data: UserCashbackUpdate, db: AsyncSession = Depends(get_db)):
+    from models.user import User
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.cashback_balance = data.cashback_balance
     await db.commit()
     return {"status": "success"}
 

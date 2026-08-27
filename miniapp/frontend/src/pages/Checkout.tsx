@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 import toast from 'react-hot-toast';
 import { useCartStore } from '../store/cartStore';
-import { createOrder } from '../api';
-import type { OrderCreate } from '../schemas';
+import { createOrder, fetchCashbackSettings, fetchUserProfile } from '../api';
+import type { OrderCreate, CashbackSettings } from '../api';
 import { getUserId } from '../utils/user';
 
 export default function Checkout() {
@@ -26,6 +26,26 @@ export default function Checkout() {
       name: savedName,
       phone: savedPhone
     }));
+  }, []);
+  
+  const [cashbackSettings, setCashbackSettings] = useState<CashbackSettings | null>(null);
+  const [userBalance, setUserBalance] = useState(0);
+  const [useCashback, setUseCashback] = useState(false);
+
+  useEffect(() => {
+    const loadCashback = async () => {
+      try {
+        const settings = await fetchCashbackSettings();
+        setCashbackSettings(settings);
+        if (settings.is_enabled) {
+          const profile = await fetchUserProfile(getUserId());
+          setUserBalance(profile.cashback_balance);
+        }
+      } catch (err) {
+        console.error("Failed to load cashback data", err);
+      }
+    };
+    loadCashback();
   }, []);
   
   const [loading, setLoading] = useState(false);
@@ -64,7 +84,7 @@ export default function Checkout() {
         phone: formData.phone,
         address: "Самовивіз (На винос)",
         comment: formData.comment || "",
-        total_price: getTotalPrice(),
+        use_cashback_amount: useCashback ? Math.min(userBalance, getTotalPrice() * ((cashbackSettings?.max_pay_percent || 100) / 100)) : 0,
         items: items.map(item => ({
           product_id: item.product.id,
           quantity: item.quantity
@@ -153,11 +173,40 @@ export default function Checkout() {
           <div className="bg-red-500/5 border border-red-500/15 text-red-400 px-4 py-3 rounded-xl text-xs font-bold">{error}</div>
         )}
 
-        <div className="pt-4">
+        <div className="pt-4 border-t border-white/10 mt-6">
+          {cashbackSettings?.is_enabled && userBalance > 0 && (
+            <div className="mb-4 bg-brand-charcoal border border-brand-orange/20 rounded-xl p-4 flex items-start gap-3">
+              <input 
+                type="checkbox" 
+                checked={useCashback} 
+                onChange={(e) => setUseCashback(e.target.checked)}
+                className="mt-1 w-5 h-5 rounded border-white/20 bg-black accent-brand-orange"
+              />
+              <div>
+                <p className="font-bold text-sm text-white">Списати бонуси</p>
+                <p className="text-xs text-brand-orange mt-0.5">
+                  Доступно: {userBalance.toFixed(2)} грн 
+                  (Можна списати до {cashbackSettings.max_pay_percent}% від суми)
+                </p>
+              </div>
+            </div>
+          )}
+
+          {cashbackSettings?.is_enabled && (
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-gray-400 font-semibold text-xs">Ви отримаєте кешбек:</span>
+              <span className="text-brand-orange font-bold text-xs">
+                +{((getTotalPrice() - (useCashback ? Math.min(userBalance, getTotalPrice() * (cashbackSettings.max_pay_percent / 100)) : 0)) * (cashbackSettings.percentage / 100)).toFixed(2)} бонусів
+              </span>
+            </div>
+          )}
+
           <div className="flex justify-between items-end mb-4">
             <span className="text-gray-500 font-semibold text-sm">До сплати:</span>
             <div className="flex items-end gap-1">
-              <span className="text-2xl font-black text-white">{getTotalPrice().toLocaleString('uk-UA')}</span>
+              <span className="text-2xl font-black text-white">
+                {(getTotalPrice() - (useCashback && cashbackSettings ? Math.min(userBalance, getTotalPrice() * (cashbackSettings.max_pay_percent / 100)) : 0)).toLocaleString('uk-UA')}
+              </span>
               <span className="text-brand-orange font-bold text-sm mb-0.5">грн</span>
             </div>
           </div>

@@ -13,6 +13,7 @@ class OrderCreate(BaseModel):
     phone: str = Field(..., min_length=1, max_length=30)
     address: str = Field(..., min_length=1, max_length=255)
     comment: Optional[str] = Field(default="", max_length=1000)
+    use_cashback_amount: Optional[float] = 0.0
     items: List[OrderItemCreate]
 
 class OrderStatusUpdate(BaseModel):
@@ -37,6 +38,8 @@ class OrderSchema(BaseModel):
     status: str
     total_price: float
     delivery_cost: float = 0.0
+    cashback_used: float = 0.0
+    cashback_earned: float = 0.0
     customer_name: str
     phone: str
     address: str

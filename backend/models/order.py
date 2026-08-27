@@ -16,6 +16,8 @@ class Order(Base):
     phone = Column(String, nullable=False)
     address = Column(String, nullable=False)
     comment = Column(String, nullable=True)
+    cashback_used = Column(Float, default=0.0)
+    cashback_earned = Column(Float, default=0.0)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")

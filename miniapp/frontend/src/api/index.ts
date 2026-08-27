@@ -51,6 +51,7 @@ export interface OrderCreate {
   phone: string;
   address: string;
   comment?: string;
+  use_cashback_amount?: number;
   items: OrderItemCreate[];
 }
 
@@ -80,6 +81,11 @@ export const fetchUserOrders = async (userId: number): Promise<any[]> => {
   return data;
 };
 
+export const fetchUserProfile = async (userId: number): Promise<{ cashback_balance: number }> => {
+  const { data } = await api.get(`/orders/user_profile/${userId}`);
+  return data;
+};
+
 export const fetchPaymentCard = async (): Promise<{ card_number: string, is_enabled: boolean }> => {
   const { data } = await api.get('/admin/settings/payment_card');
   return data;
@@ -94,6 +100,17 @@ export interface StoreStatus {
 
 export const fetchStoreStatus = async (): Promise<StoreStatus> => {
   const { data } = await api.get('/catalog/store_status');
+  return data;
+};
+
+export interface CashbackSettings {
+  is_enabled: boolean;
+  percentage: number;
+  max_pay_percent: number;
+}
+
+export const fetchCashbackSettings = async (): Promise<CashbackSettings> => {
+  const { data } = await api.get('/catalog/cashback_settings');
   return data;
 };
 

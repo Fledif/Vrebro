@@ -5,6 +5,7 @@ import Products from './pages/Products';
 import Categories from './pages/Categories';
 import Settings from './pages/Settings';
 import Receipts from './pages/Receipts';
+import Users from './pages/Users';
 import ProtectedLayout from './components/ProtectedLayout';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
           <Route path="/receipts" element={<Receipts />} />
           <Route path="/products" element={<Products />} />
           <Route path="/categories" element={<Categories />} />
+          <Route path="/users" element={<Users />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
         

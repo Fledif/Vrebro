@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
-import { Save, Lock, Clock } from 'lucide-react';
+import { Save, Lock, Clock, Gift } from 'lucide-react';
 
 export default function Settings() {
   const [masterPassword, setMasterPassword] = useState('');
@@ -13,6 +13,11 @@ export default function Settings() {
   const [openTime, setOpenTime] = useState('10:00');
   const [closeTime, setCloseTime] = useState('22:00');
   const [savingHours, setSavingHours] = useState(false);
+
+  const [isCashbackEnabled, setIsCashbackEnabled] = useState(false);
+  const [cashbackPercentage, setCashbackPercentage] = useState('0');
+  const [cashbackMaxPay, setCashbackMaxPay] = useState('100');
+  const [savingCashback, setSavingCashback] = useState(false);
 
   useEffect(() => {
     // We can fetch the current card number even without password, if we want to show it.
@@ -36,8 +41,19 @@ export default function Settings() {
         console.error("Failed to fetch hours", err);
       }
     };
+    const fetchCashback = async () => {
+      try {
+        const res = await api.get('/admin/settings/cashback');
+        setIsCashbackEnabled(res.data.is_enabled);
+        setCashbackPercentage(res.data.percentage.toString());
+        setCashbackMaxPay(res.data.max_pay_percent.toString());
+      } catch (err) {
+        console.error("Failed to fetch cashback settings", err);
+      }
+    };
     fetchCard();
     fetchHours();
+    fetchCashback();
   }, []);
 
   const handleUnlock = (e: React.FormEvent) => {
@@ -82,6 +98,22 @@ export default function Settings() {
       alert('Помилка при збереженні графіка');
     } finally {
       setSavingHours(false);
+    }
+  };
+
+  const handleSaveCashback = async () => {
+    setSavingCashback(true);
+    try {
+      await api.post('/admin/settings/cashback', {
+        is_enabled: isCashbackEnabled,
+        percentage: parseFloat(cashbackPercentage),
+        max_pay_percent: parseFloat(cashbackMaxPay)
+      });
+      alert('Налаштування кешбеку збережено!');
+    } catch (err) {
+      alert('Помилка при збереженні кешбеку');
+    } finally {
+      setSavingCashback(false);
     }
   };
 
@@ -214,6 +246,67 @@ export default function Settings() {
         >
           <Save size={20} />
           {savingHours ? "Збереження..." : "Зберегти графік"}
+        </button>
+      </div>
+
+      <div className="bg-[var(--color-surface)] p-6 rounded-2xl border border-neutral-800 mb-12">
+        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+          <Gift size={20} className="text-brand-orange" /> Система Кешбеку (Лояльність)
+        </h3>
+        <p className="text-neutral-400 mb-6 text-sm">
+          Налаштуйте нарахування бонусів клієнтам за їхні замовлення. Клієнти зможуть використовувати бонуси для оплати наступних замовлень (1 бонус = 1 грн).
+        </p>
+
+        <div className="flex items-center gap-3 mb-6 bg-neutral-900/50 p-4 rounded-xl border border-neutral-800">
+          <input 
+            type="checkbox" 
+            id="isCashbackEnabled"
+            checked={isCashbackEnabled}
+            onChange={(e) => setIsCashbackEnabled(e.target.checked)}
+            className="w-5 h-5 rounded border-neutral-700 bg-neutral-800 accent-brand-orange"
+          />
+          <div className="flex-1">
+            <label htmlFor="isCashbackEnabled" className="font-bold cursor-pointer text-white block">Увімкнути систему кешбеку</label>
+            <span className="text-xs text-neutral-500">Якщо вимкнено, кешбек не нараховується і не списується.</span>
+          </div>
+        </div>
+
+        {isCashbackEnabled && (
+          <div className="flex gap-4 mb-8">
+            <div className="flex-1">
+              <label className="block text-sm text-neutral-400 mb-2">Відсоток кешбеку (%)</label>
+              <input 
+                type="number"
+                value={cashbackPercentage}
+                onChange={(e) => setCashbackPercentage(e.target.value)}
+                min="0"
+                max="100"
+                className="w-full px-4 py-3 bg-[#0a0a0a] border border-neutral-800 rounded-xl focus:outline-none focus:border-brand-orange text-lg text-white"
+              />
+              <p className="text-xs text-neutral-500 mt-1">Скільки % від суми замовлення отримує клієнт.</p>
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm text-neutral-400 mb-2">Макс. оплата бонусами (%)</label>
+              <input 
+                type="number"
+                value={cashbackMaxPay}
+                onChange={(e) => setCashbackMaxPay(e.target.value)}
+                min="1"
+                max="100"
+                className="w-full px-4 py-3 bg-[#0a0a0a] border border-neutral-800 rounded-xl focus:outline-none focus:border-brand-orange text-lg text-white"
+              />
+              <p className="text-xs text-neutral-500 mt-1">Скільки % вартості замовлення можна оплатити бонусами.</p>
+            </div>
+          </div>
+        )}
+
+        <button 
+          onClick={handleSaveCashback}
+          disabled={savingCashback}
+          className="flex items-center gap-2 px-6 py-3 bg-brand-orange text-white rounded-xl font-bold hover:bg-orange-600 transition-colors disabled:opacity-50"
+        >
+          <Save size={20} />
+          {savingCashback ? "Збереження..." : "Зберегти налаштування кешбеку"}
         </button>
       </div>
     </div>

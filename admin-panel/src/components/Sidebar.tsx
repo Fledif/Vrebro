@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Tags, LogOut, FileText, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutDashboard, Package, Tags, LogOut, FileText, Settings as SettingsIcon, Users as UsersIcon } from 'lucide-react';
 
 export default function Sidebar() {
   const location = useLocation();
@@ -14,6 +14,7 @@ export default function Sidebar() {
     { name: 'Чеки (Архів)', path: '/receipts', icon: FileText },
     { name: 'Товари', path: '/products', icon: Package },
     { name: 'Категорії', path: '/categories', icon: Tags },
+    { name: 'Клієнти', path: '/users', icon: UsersIcon },
     { name: 'Налаштування', path: '/settings', icon: SettingsIcon },
   ];
 

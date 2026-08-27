@@ -97,3 +97,15 @@ async def get_store_status(db: AsyncSession = Depends(get_db)):
         "close_time": close_time,
         "is_enabled": is_enabled
     }
+
+@router.get("/cashback_settings")
+async def get_public_cashback_settings(db: AsyncSession = Depends(get_db)):
+    enabled_setting = await db.get(StoreSettings, "cashback_enabled")
+    percentage_setting = await db.get(StoreSettings, "cashback_percentage")
+    max_pay_setting = await db.get(StoreSettings, "cashback_max_pay_percent")
+    
+    return {
+        "is_enabled": enabled_setting.value.lower() == "true" if enabled_setting else False,
+        "percentage": float(percentage_setting.value) if percentage_setting else 0.0,
+        "max_pay_percent": float(max_pay_setting.value) if max_pay_setting else 100.0
+    }

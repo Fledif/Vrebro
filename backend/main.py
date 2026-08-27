@@ -77,7 +77,10 @@ async def lifespan(app: FastAPI):
         "ALTER TABLE products ADD COLUMN is_out_of_stock BOOLEAN DEFAULT FALSE",
         "ALTER TABLE products ADD COLUMN cross_sell_ids VARCHAR",
         "ALTER TABLE orders ADD COLUMN delivery_cost FLOAT DEFAULT 0.0",
-        "ALTER TABLE order_items ADD COLUMN product_name VARCHAR"
+        "ALTER TABLE order_items ADD COLUMN product_name VARCHAR",
+        "ALTER TABLE users ADD COLUMN cashback_balance FLOAT DEFAULT 0.0",
+        "ALTER TABLE orders ADD COLUMN cashback_used FLOAT DEFAULT 0.0",
+        "ALTER TABLE orders ADD COLUMN cashback_earned FLOAT DEFAULT 0.0"
     ]
     # We must use separate connections/transactions for each query because in Postgres, 
     # a failed ALTER TABLE aborts the entire transaction block.
