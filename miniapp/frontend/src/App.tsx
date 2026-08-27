@@ -4,6 +4,7 @@ import WebApp from '@twa-dev/sdk';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import { Home as HomeIcon, LayoutGrid, ShoppingCart, User } from 'lucide-react';
+import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import LoadingScreen from './components/LoadingScreen';
 import { useCartStore } from './store/cartStore';
@@ -38,14 +39,20 @@ function Navigation() {
             isActive(path) ? "text-brand-orange" : "text-gray-600"
           )}
         >
-          <div className="relative">
+          <motion.div 
+            className="relative"
+            key={path === '/cart' ? badge : 'static'}
+            initial={path === '/cart' && badge ? { scale: 1.3, rotate: -15 } : {}}
+            animate={path === '/cart' && badge ? { scale: 1, rotate: 0 } : {}}
+            transition={{ type: "spring", stiffness: 300, damping: 15 }}
+          >
             <Icon size={18} strokeWidth={isActive(path) ? 2.5 : 1.5} />
             {badge !== undefined && badge > 0 && (
-              <span className="absolute -top-1.5 -right-2.5 bg-brand-red text-white text-[9px] font-bold px-1 py-0.5 rounded-full min-w-[16px] text-center leading-none">
+              <span className="absolute -top-1.5 -right-2.5 bg-brand-red text-white text-[9px] font-bold px-1 py-0.5 rounded-full min-w-[16px] text-center leading-none shadow-[0_0_10px_rgba(209,0,0,0.6)]">
                 {badge}
               </span>
             )}
-          </div>
+          </motion.div>
           <span className="text-[9px] font-medium">{label}</span>
         </Link>
       ))}

@@ -37,6 +37,7 @@ export interface Product {
   weight_step?: number;
   stock_quantity?: number | null;
   is_out_of_stock?: boolean;
+  cross_sell_ids?: string;
 }
 
 export interface OrderItemCreate {

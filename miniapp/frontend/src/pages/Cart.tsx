@@ -1,10 +1,45 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
+import { fetchProducts } from '../api';
+import type { Product } from '../api';
+import toast from 'react-hot-toast';
 
 export default function Cart() {
-  const { items, increaseQuantity, decreaseQuantity, removeItem, getTotalPrice, clearCart } = useCartStore();
+  const { items, increaseQuantity, decreaseQuantity, removeItem, getTotalPrice, clearCart, addItem, openWeightModal } = useCartStore();
   const navigate = useNavigate();
+  const [crossSellProducts, setCrossSellProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const ids = new Set<number>();
+    items.forEach(item => {
+      if (item.product.cross_sell_ids) {
+        item.product.cross_sell_ids.split(',').forEach(id => {
+           const num = parseInt(id.trim());
+           if (!isNaN(num)) ids.add(num);
+        });
+      }
+    });
+
+    if (ids.size > 0) {
+      fetchProducts().then(allProducts => {
+         const cartIds = items.map(i => i.product.id);
+         const recommended = allProducts.filter(p => ids.has(p.id) && !cartIds.includes(p.id) && p.is_active && !p.is_out_of_stock);
+         setCrossSellProducts(recommended);
+      }).catch(console.error);
+    } else {
+      setCrossSellProducts([]);
+    }
+  }, [items]);
+
+  const handleAddCrossSell = (product: Product) => {
+    if (product.is_weighted) {
+      openWeightModal(product);
+    } else {
+      addItem(product);
+      toast.success("Додано!");
+    }
+  };
 
   if (items.length === 0) {
     return (
@@ -70,6 +105,37 @@ export default function Cart() {
           </div>
         ))}
       </div>
+
+      {crossSellProducts.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+            🔥 З цим смакує
+          </h3>
+          <div className="flex gap-3 overflow-x-auto pb-4 hide-scrollbar snap-x">
+            {crossSellProducts.map(p => (
+              <div key={p.id} className="min-w-[140px] w-[140px] glass-card rounded-xl p-2 flex flex-col snap-start">
+                <div className="w-full h-24 bg-brand-charcoal rounded-lg overflow-hidden mb-2">
+                  {p.image_url ? (
+                    <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-600">Фото</div>
+                  )}
+                </div>
+                <h4 className="font-bold text-xs leading-tight line-clamp-2 mb-1 flex-1">{p.name}</h4>
+                <div className="flex justify-between items-center mt-1">
+                  <span className="font-bold text-brand-orange text-sm">
+                    {p.is_promo ? p.promo_price : p.price} {p.is_weighted ? 'грн/кг' : 'грн'}
+                  </span>
+                  <button 
+                    onClick={() => handleAddCrossSell(p)}
+                    className="w-7 h-7 rounded-full bg-brand-orange text-white flex items-center justify-center active:scale-95"
+                  >+</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Sticky Bottom */}
       <div className="fixed bottom-16 left-0 w-full bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A] to-transparent pt-10 pb-4 px-4 z-40">

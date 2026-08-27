@@ -25,6 +25,13 @@ const statusColors: Record<string, string> = {
   CANCELLED: 'text-red-500 bg-red-500/5 border-red-500/10'
 };
 
+const getStepIndex = (status: string) => {
+  if (['NEW', 'REVIEWED', 'EDITED'].includes(status)) return 0;
+  if (['PACKING'].includes(status)) return 1;
+  if (['SHIPPED', 'CONFIRMED'].includes(status)) return 2;
+  return -1;
+};
+
 export default function MyOrders() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,10 +140,36 @@ export default function MyOrders() {
                   <h3 className="font-bold text-base">Замовлення #{order.order_number}</h3>
                   <p className="text-[11px] text-gray-500 mt-0.5">{new Date(order.created_at).toLocaleString('uk-UA')}</p>
                 </div>
-                <div className={`px-2 py-1 rounded-lg text-[11px] font-bold border ${statusColors[order.status] || 'text-gray-400 border-gray-700 bg-gray-800'}`}>
-                  {statusLabels[order.status] || order.status}
-                </div>
+                {order.status === 'CANCELLED' && (
+                  <div className="px-2 py-1 rounded-lg text-[11px] font-bold border text-red-500 bg-red-500/5 border-red-500/10">
+                    Скасовано
+                  </div>
+                )}
               </div>
+
+              {order.status !== 'CANCELLED' && (
+                <div className="mb-4 mt-2">
+                  <div className="flex justify-between relative px-2">
+                    <div className="absolute top-1.5 left-4 right-4 h-0.5 bg-gray-800 -z-10 rounded-full"></div>
+                    <div 
+                      className="absolute top-1.5 left-4 h-0.5 bg-brand-orange -z-10 rounded-full transition-all duration-500" 
+                      style={{ width: getStepIndex(order.status) === 0 ? '0%' : getStepIndex(order.status) === 1 ? '50%' : 'calc(100% - 2rem)' }}
+                    ></div>
+                    
+                    {['Оформлено', 'Готується', 'Готово'].map((stepName, idx) => {
+                      const currentStep = getStepIndex(order.status);
+                      const isActive = idx <= currentStep;
+                      const isCurrent = idx === currentStep;
+                      return (
+                        <div key={idx} className="flex flex-col items-center gap-1.5 bg-[#111111] px-1 z-10">
+                          <div className={`w-3.5 h-3.5 rounded-full border-2 ${isActive ? 'bg-brand-orange border-brand-orange' : 'bg-gray-800 border-gray-700'} ${isCurrent ? 'ring-2 ring-brand-orange/30' : ''}`} />
+                          <span className={`text-[9px] font-bold ${isActive ? 'text-white' : 'text-gray-500'}`}>{stepName}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-1.5 mb-3">
                 {order.items.map((item: any) => (

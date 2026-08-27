@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 import toast from 'react-hot-toast';
@@ -13,10 +13,20 @@ export default function Checkout() {
 
   const [formData, setFormData] = useState({
     name: '',
-    phone: '',
+    phone: '+380',
     address: '',
     comment: ''
   });
+  
+  useEffect(() => {
+    const savedName = localStorage.getItem('vrebro_name') || '';
+    const savedPhone = localStorage.getItem('vrebro_phone') || '+380';
+    setFormData(prev => ({
+      ...prev,
+      name: savedName,
+      phone: savedPhone
+    }));
+  }, []);
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -62,6 +72,11 @@ export default function Checkout() {
       };
 
       await createOrder(orderPayload);
+      
+      // Save data for next time
+      localStorage.setItem('vrebro_name', formData.name);
+      localStorage.setItem('vrebro_phone', formData.phone);
+      
       setSuccess(true);
       clearCart();
       toast.success("Переміщено до профілю, там можна переглянути статус замовлення", { duration: 4000 });
