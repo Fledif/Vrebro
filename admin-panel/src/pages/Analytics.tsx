@@ -140,7 +140,7 @@ export default function Analytics() {
               <YAxis tick={{ fill: '#666', fontSize: 10 }} tickLine={false} axisLine={false} />
               <Tooltip
                 contentStyle={{ background: '#111', border: '1px solid #333', borderRadius: '10px', color: '#fff' }}
-                formatter={(v: number) => [`${v.toFixed(0)} ₴`, 'Виручка']}
+                formatter={(v: any) => [`${v.toLocaleString('uk-UA')} ₴`, 'Виручка']}
               />
               <Line type="monotone" dataKey="revenue" stroke={ORANGE} strokeWidth={2} dot={false} activeDot={{ r: 4, fill: ORANGE }} />
             </LineChart>
@@ -188,10 +188,10 @@ export default function Analytics() {
             <YAxis tick={{ fill: '#666', fontSize: 10 }} tickLine={false} axisLine={false} />
             <Tooltip
               contentStyle={{ background: '#111', border: '1px solid #333', borderRadius: '10px', color: '#fff' }}
-              formatter={(v: number) => [`${v.toFixed(0)} ₴`, 'Виручка']}
+              formatter={(v: any) => [`${v} ₴`, 'Виручка']}
             />
             <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
-              {chart.slice(-14).map((entry, index) => (
+              {chart.slice(-14).map((_, index) => (
                 <Cell key={`cell-${index}`} fill={index === chart.slice(-14).length - 1 ? ORANGE : 'rgba(255,81,0,0.4)'} />
               ))}
             </Bar>

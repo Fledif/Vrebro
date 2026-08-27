@@ -11,7 +11,7 @@ from models.base import Base
 import models.product
 import models.order
 import models.user
-from routers import admin, catalog, orders, ai
+from routers import admin, catalog, monitor, orders, ai
 
 import asyncio
 from bot import bot, dp
@@ -153,6 +153,7 @@ app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(ai.router, prefix="/api/admin/ai", tags=["ai"])
 app.include_router(catalog.router, prefix="/api/catalog", tags=["catalog"])
 app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
+app.include_router(monitor.router)
 
 @app.post("/api/webhook")
 async def telegram_webhook(request: Request):
@@ -174,6 +175,12 @@ if os.path.exists(os.path.join(admin_path, "assets")):
 
 if os.path.exists(os.path.join(miniapp_path, "assets")):
     app.mount("/miniapp/assets", StaticFiles(directory=os.path.join(miniapp_path, "assets")), name="miniapp_assets")
+
+app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
+
+@app.get("/monitor")
+async def serve_monitor():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "static", "monitor.html"))
 
 @app.get("/miniapp")
 @app.get("/miniapp/")

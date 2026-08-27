@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
-import { Save, Lock, Clock, Gift, Store, Bell, MapPin, Phone, AlarmClock, Truck, ShoppingBag, AlertTriangle, MessageSquare, Volume2 } from 'lucide-react';
+import { Save, Lock, Clock, Gift, Store, Bell, MapPin, AlarmClock, Truck, ShoppingBag, AlertTriangle, MessageSquare } from 'lucide-react';
 
 interface StoreInfo {
   store_name: string;
