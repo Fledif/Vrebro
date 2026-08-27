@@ -47,6 +47,7 @@ async def lifespan(app: FastAPI):
             conn.execute("ALTER TABLE products ADD COLUMN is_weighted BOOLEAN DEFAULT 0")
             conn.execute("ALTER TABLE products ADD COLUMN weight_step INTEGER")
             conn.execute("ALTER TABLE order_items ADD COLUMN product_name VARCHAR")
+            conn.execute("ALTER TABLE products ADD COLUMN cross_sell_ids VARCHAR")
     except Exception as e:
         print(f"Migration for products/order_items: {e}")
 
@@ -74,6 +75,7 @@ async def lifespan(app: FastAPI):
         "ALTER TABLE products ADD COLUMN weight_step INTEGER",
         "ALTER TABLE products ADD COLUMN stock_quantity FLOAT",
         "ALTER TABLE products ADD COLUMN is_out_of_stock BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE products ADD COLUMN cross_sell_ids VARCHAR",
         "ALTER TABLE orders ADD COLUMN delivery_cost FLOAT DEFAULT 0.0",
         "ALTER TABLE order_items ADD COLUMN product_name VARCHAR"
     ]
