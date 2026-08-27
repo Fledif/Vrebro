@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
-import { fetchUserOrders, fetchPaymentCard, fetchCashbackSettings, fetchUserProfile } from '../api';
+import { fetchUserOrders, fetchPaymentCard, fetchCashbackSettings, fetchUserProfile, fetchProducts } from '../api';
 import type { CashbackSettings } from '../api';
 import { Package, CreditCard, Check, Gift } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getUserId } from '../utils/user';
+import { useCartStore } from '../store/cartStore';
 
 const statusLabels: Record<string, string> = {
   NEW: 'Не розглянуто',
@@ -34,12 +36,35 @@ const getStepIndex = (status: string) => {
 };
 
 export default function MyOrders() {
+  const navigate = useNavigate();
+  const { addItem, clearCart } = useCartStore();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [paymentCard, setPaymentCard] = useState<{card_number: string, is_enabled: boolean} | null>(null);
   const [cashbackSettings, setCashbackSettings] = useState<CashbackSettings | null>(null);
   const [userBalance, setUserBalance] = useState(0);
   const prevOrdersRef = React.useRef<any[]>([]);
+
+  const handleRepeatOrder = async (order: any) => {
+    try {
+      const allProducts = await fetchProducts();
+      clearCart();
+      for (const item of order.items) {
+        const product = allProducts.find((p: any) => p.id === item.product_id || (item.product && p.id === item.product.id));
+        if (product && !product.is_out_of_stock) {
+          for (let i = 0; i < Math.round(item.quantity); i++) {
+            addItem(product);
+          }
+        }
+      }
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+      }
+      navigate('/cart');
+    } catch (err) {
+      console.error('Repeat order failed', err);
+    }
+  };
 
   const playNotificationSound = () => {
     try {
@@ -252,6 +277,12 @@ export default function MyOrders() {
                   <span className="text-xs font-bold">Оплачено та завершено</span>
                 </div>
               )}
+              <button
+                onClick={() => handleRepeatOrder(order)}
+                className="mt-2 w-full py-2.5 rounded-xl bg-brand-charcoal border border-white/6 text-white/70 text-xs font-bold flex items-center justify-center gap-2 active:bg-white/5 transition-colors"
+              >
+                🔄 Повторити замовлення
+              </button>
             </motion.div>
           ))}
         </div>

@@ -22,6 +22,7 @@ interface Product {
   stock_quantity: number | null;
   is_out_of_stock: boolean;
   cross_sell_ids: string | null;
+  track_stock: boolean;
 }
 
 export default function Products() {
@@ -59,7 +60,8 @@ export default function Products() {
     weight_step: '',
     stock_quantity: '',
     is_out_of_stock: false,
-    cross_sell_ids: ''
+    cross_sell_ids: '',
+    track_stock: false
   });
 
   const fetchData = async () => {
@@ -95,14 +97,15 @@ export default function Products() {
         weight_step: prod.weight_step ? prod.weight_step.toString() : '',
         stock_quantity: prod.stock_quantity !== null && prod.stock_quantity !== undefined ? prod.stock_quantity.toString() : '',
         is_out_of_stock: prod.is_out_of_stock || false,
-        cross_sell_ids: prod.cross_sell_ids || ''
+        cross_sell_ids: prod.cross_sell_ids || '',
+        track_stock: prod.track_stock || false
       });
     } else {
       setEditingId(null);
       setFormData({
         name: '', category_id: categories[0]?.id.toString() || '', description: '', 
         price: '', image_url: '', is_active: true, is_promo: false, promo_price: '',
-        is_weighted: false, weight_step: '', stock_quantity: '', is_out_of_stock: false, cross_sell_ids: ''
+        is_weighted: false, weight_step: '', stock_quantity: '', is_out_of_stock: false, cross_sell_ids: '', track_stock: false
       });
     }
     setIsModalOpen(true);
@@ -189,7 +192,8 @@ export default function Products() {
       weight_step: formData.weight_step ? parseInt(formData.weight_step) : null,
       stock_quantity: formData.stock_quantity ? parseFloat(formData.stock_quantity) : null,
       is_out_of_stock: formData.is_out_of_stock,
-      cross_sell_ids: formData.cross_sell_ids || null
+      cross_sell_ids: formData.cross_sell_ids || null,
+      track_stock: formData.track_stock
     };
 
     try {
@@ -391,6 +395,15 @@ export default function Products() {
                   <label className="block text-sm text-neutral-400 mb-1">Крос-селлинг (ID товарів через кому)</label>
                   <input type="text" value={formData.cross_sell_ids} onChange={e => setFormData({...formData, cross_sell_ids: e.target.value})} placeholder="Наприклад: 3,5,10" className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2 text-white" />
                   <p className="text-xs text-neutral-500 mt-1">Ці товари будуть пропонуватися в кошику.</p>
+                </div>
+                <div className="col-span-2 border-t border-neutral-800 pt-4">
+                  <div className="flex items-center gap-3 p-4 bg-neutral-900/50 rounded-xl border border-neutral-800">
+                    <input type="checkbox" id="track_stock" checked={formData.track_stock} onChange={e => setFormData({...formData, track_stock: e.target.checked})} className="w-4 h-4 accent-brand-orange" />
+                    <div>
+                      <label htmlFor="track_stock" className="font-semibold text-white text-sm cursor-pointer block">Відстежувати залишки</label>
+                      <p className="text-xs text-neutral-500">При скасуванні замовлення — товар повернеться на склад</p>
+                    </div>
+                  </div>
                 </div>
               </div>
               <button type="submit" className="w-full bg-[var(--color-primary)] hover:bg-orange-600 text-white font-medium py-3 rounded-xl transition-colors mt-6 cursor-pointer">

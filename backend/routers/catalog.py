@@ -109,3 +109,33 @@ async def get_public_cashback_settings(db: AsyncSession = Depends(get_db)):
         "percentage": float(percentage_setting.value) if percentage_setting else 0.0,
         "max_pay_percent": float(max_pay_setting.value) if max_pay_setting else 100.0
     }
+
+@router.get("/store_info")
+async def get_public_store_info(db: AsyncSession = Depends(get_db)):
+    keys = ["store_name", "store_address", "store_phone", "store_greeting",
+            "store_closed_message", "min_order_amount", "avg_cooking_time",
+            "free_delivery_from", "emergency_pause", "settlement_name"]
+    defaults = {
+        "store_name": "VreBRO",
+        "store_address": "",
+        "store_phone": "",
+        "store_greeting": "",
+        "store_closed_message": "На жаль, ми зараз зачинені.",
+        "min_order_amount": "0.0",
+        "avg_cooking_time": "30",
+        "free_delivery_from": "0.0",
+        "emergency_pause": "false",
+        "settlement_name": "Самовивіз"
+    }
+    result = {}
+    for key in keys:
+        setting = await db.get(StoreSettings, key)
+        raw = setting.value if setting else defaults.get(key, "")
+        # coerce types
+        if key in ["min_order_amount", "avg_cooking_time", "free_delivery_from"]:
+            result[key] = float(raw)
+        elif key == "emergency_pause":
+            result[key] = raw.lower() == "true"
+        else:
+            result[key] = raw
+    return result

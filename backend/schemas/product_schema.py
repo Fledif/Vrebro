@@ -33,6 +33,7 @@ class ProductBase(BaseModel):
     stock_quantity: Optional[float] = None
     is_out_of_stock: Optional[bool] = False
     cross_sell_ids: Optional[str] = Field(default=None, max_length=255)
+    track_stock: bool = False
 
 class ProductCreate(ProductBase):
     pass

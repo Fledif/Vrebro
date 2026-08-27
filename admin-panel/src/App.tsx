@@ -6,6 +6,7 @@ import Categories from './pages/Categories';
 import Settings from './pages/Settings';
 import Receipts from './pages/Receipts';
 import Users from './pages/Users';
+import Analytics from './pages/Analytics';
 import ProtectedLayout from './components/ProtectedLayout';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
           <Route path="/products" element={<Products />} />
           <Route path="/categories" element={<Categories />} />
           <Route path="/users" element={<Users />} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
         

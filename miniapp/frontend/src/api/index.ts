@@ -114,4 +114,22 @@ export const fetchCashbackSettings = async (): Promise<CashbackSettings> => {
   return data;
 };
 
+export interface StoreInfo {
+  store_name: string;
+  store_address: string;
+  store_phone: string;
+  store_greeting: string;
+  store_closed_message: string;
+  min_order_amount: number;
+  avg_cooking_time: number;
+  free_delivery_from: number;
+  emergency_pause: boolean;
+  settlement_name: string;
+}
+
+export const fetchStoreInfo = async (): Promise<StoreInfo> => {
+  const { data } = await api.get('/catalog/store_info');
+  return data;
+};
+
 export default api;

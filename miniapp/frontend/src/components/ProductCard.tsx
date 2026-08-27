@@ -1,16 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import type { Product } from '../api';
 import { useCartStore } from '../store/cartStore';
+import { Heart } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
 }
 
+function getFavorites(): number[] {
+  try { return JSON.parse(localStorage.getItem('vrebro_favorites') || '[]'); } catch { return []; }
+}
+function saveFavorites(ids: number[]) {
+  localStorage.setItem('vrebro_favorites', JSON.stringify(ids));
+}
+
 export default function ProductCard({ product }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem);
   const openWeightModal = useCartStore((state) => state.openWeightModal);
+  const [isFav, setIsFav] = useState(() => getFavorites().includes(product.id));
+
+  const toggleFav = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const favs = getFavorites();
+    const next = favs.includes(product.id) ? favs.filter(id => id !== product.id) : [...favs, product.id];
+    saveFavorites(next);
+    setIsFav(next.includes(product.id));
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+      window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+    }
+  };
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -48,6 +69,13 @@ export default function ProductCard({ product }: ProductCardProps) {
             <span className="text-red-500 text-xs font-bold bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">Немає в наявності</span>
           </div>
         )}
+        {/* Heart favorite button */}
+        <button
+          onClick={toggleFav}
+          className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm transition-all active:scale-90 ${isFav ? 'bg-red-500 text-white' : 'bg-black/40 text-white/60'}`}
+        >
+          <Heart size={13} fill={isFav ? 'currentColor' : 'none'} />
+        </button>
       </Link>
       
       <div className="p-3 flex-1 flex flex-col">

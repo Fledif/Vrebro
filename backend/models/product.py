@@ -30,6 +30,7 @@ class Product(Base):
     stock_quantity = Column(Float, nullable=True) # null means unlimited
     is_out_of_stock = Column(Boolean, default=False)
     cross_sell_ids = Column(String, nullable=True)
+    track_stock = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     category = relationship("Category", back_populates="products")

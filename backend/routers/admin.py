@@ -291,16 +291,18 @@ async def update_order_status(id: int, status_update: OrderStatusUpdate, db: Asy
     if status_update.delivery_cost is not None:
         order.delivery_cost = status_update.delivery_cost
         
-    # Return stock if cancelled
+    # Return stock if cancelled (only if track_stock is enabled)
     if old_status != "CANCELLED" and order.status == "CANCELLED":
         for item in order.items:
-            if item.product and item.product.stock_quantity is not None:
+            if item.product and item.product.stock_quantity is not None and getattr(item.product, 'track_stock', False):
                 item.product.stock_quantity += item.quantity
+                if item.product.stock_quantity > 0:
+                    item.product.is_out_of_stock = False
                 
     # Deduct stock if un-cancelled
     if old_status == "CANCELLED" and order.status != "CANCELLED":
         for item in order.items:
-            if item.product and item.product.stock_quantity is not None:
+            if item.product and item.product.stock_quantity is not None and getattr(item.product, 'track_stock', False):
                 item.product.stock_quantity -= item.quantity
                 
     # Add cashback to user if confirmed
@@ -324,15 +326,30 @@ async def update_order_status(id: int, status_update: OrderStatusUpdate, db: Asy
     
     await manager.broadcast("update")
     
+    # Send Telegram push notification
     if bot and order.user_id:
-        try:
-            await bot.send_message(
-                chat_id=order.user_id, 
-                text=f"📦 Ваше замовлення #{order.order_number} змінило статус на: *{order.status}*",
-                parse_mode="Markdown"
-            )
-        except Exception as e:
-            print(f"Failed to send telegram notification: {e}")
+        # Check if notifications are enabled in settings
+        notifications_enabled_setting = await db.get(StoreSettings, "notifications_enabled")
+        notifications_enabled = notifications_enabled_setting.value.lower() == "true" if notifications_enabled_setting else True
+        
+        if notifications_enabled:
+            status_messages = {
+                "REVIEWED": f"✅ Ваше замовлення *#{order.order_number}* переглянуто. Готуємо для вас!",
+                "PACKING": f"🔥 Замовлення *#{order.order_number}* вже готується! Зовсім скоро...",
+                "SHIPPED": f"🎉 Замовлення *#{order.order_number}* готове! Забирайте 😊",
+                "CONFIRMED": f"💚 Замовлення *#{order.order_number}* підтверджено та оплачено!{chr(10) + '🎁 Нараховано ' + str(round(order.cashback_earned or 0, 2)) + ' бонусів на ваш рахунок!' if (order.cashback_earned or 0) > 0 else ''}",
+                "CANCELLED": f"❌ Замовлення *#{order.order_number}* на жаль скасовано. Звертайтесь знову!",
+            }
+            msg = status_messages.get(order.status)
+            if msg:
+                try:
+                    await bot.send_message(
+                        chat_id=order.user_id, 
+                        text=msg,
+                        parse_mode="Markdown"
+                    )
+                except Exception as e:
+                    print(f"Failed to send telegram notification: {e}")
             
     return order
 
@@ -469,5 +486,128 @@ async def update_user_cashback(user_id: int, data: UserCashbackUpdate, db: Async
     user.cashback_balance = data.cashback_balance
     await db.commit()
     return {"status": "success"}
+
+from typing import Any, Dict
+import json
+
+class StoreInfoUpdate(BaseModel):
+    store_name: str = "VreBRO"
+    store_address: str = ""
+    store_phone: str = ""
+    store_greeting: str = ""
+    store_closed_message: str = "На жаль, ми зараз зачинені. Повертайтесь пізніше!"
+    min_order_amount: float = 0.0
+    avg_cooking_time: int = 30
+    free_delivery_from: float = 0.0
+    notifications_enabled: bool = True
+    emergency_pause: bool = False
+    settlement_name: str = "Самовивіз"
+
+STORE_INFO_KEYS = [
+    "store_name", "store_address", "store_phone", "store_greeting",
+    "store_closed_message", "min_order_amount", "avg_cooking_time",
+    "free_delivery_from", "notifications_enabled", "emergency_pause", "settlement_name"
+]
+
+@protected_router.get("/settings/store_info")
+async def get_store_info(db: AsyncSession = Depends(get_db)):
+    result = {}
+    defaults = StoreInfoUpdate()
+    for key in STORE_INFO_KEYS:
+        setting = await db.get(StoreSettings, key)
+        default_val = getattr(defaults, key)
+        if setting:
+            # Try to coerce type based on default
+            if isinstance(default_val, bool):
+                result[key] = setting.value.lower() == "true"
+            elif isinstance(default_val, int):
+                result[key] = int(setting.value)
+            elif isinstance(default_val, float):
+                result[key] = float(setting.value)
+            else:
+                result[key] = setting.value
+        else:
+            result[key] = default_val
+    return result
+
+@protected_router.post("/settings/store_info")
+async def update_store_info(data: StoreInfoUpdate, db: AsyncSession = Depends(get_db)):
+    updates = data.model_dump()
+    for key, value in updates.items():
+        setting = await db.get(StoreSettings, key)
+        str_value = str(value).lower() if isinstance(value, bool) else str(value)
+        if not setting:
+            setting = StoreSettings(key=key, value=str_value)
+            db.add(setting)
+        else:
+            setting.value = str_value
+    await db.commit()
+    return {"status": "success"}
+
+# --- ANALYTICS ---
+
+from sqlalchemy import func
+from datetime import datetime, timedelta
+
+@protected_router.get("/analytics/summary")
+async def get_analytics_summary(db: AsyncSession = Depends(get_db)):
+    now = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=7)
+    month_start = today_start - timedelta(days=30)
+
+    def make_summary(orders_list):
+        completed = [o for o in orders_list if o.status not in ("CANCELLED",)]
+        return {
+            "count": len(completed),
+            "revenue": round(sum(o.total_price for o in completed), 2),
+            "avg_check": round(sum(o.total_price for o in completed) / len(completed), 2) if completed else 0
+        }
+
+    all_result = await db.execute(select(Order))
+    all_orders = all_result.scalars().all()
+
+    today_orders = [o for o in all_orders if o.created_at and o.created_at >= today_start]
+    week_orders = [o for o in all_orders if o.created_at and o.created_at >= week_start]
+    month_orders = [o for o in all_orders if o.created_at and o.created_at >= month_start]
+
+    unique_users = len(set(o.user_id for o in all_orders if o.user_id))
+
+    return {
+        "today": make_summary(today_orders),
+        "week": make_summary(week_orders),
+        "month": make_summary(month_orders),
+        "total_customers": unique_users
+    }
+
+@protected_router.get("/analytics/top_products")
+async def get_top_products(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(OrderItem.product_name, func.sum(OrderItem.quantity).label("total_qty"), func.count(OrderItem.id).label("order_count"))
+        .group_by(OrderItem.product_name)
+        .order_by(func.sum(OrderItem.quantity).desc())
+        .limit(10)
+    )
+    rows = result.all()
+    return [{"name": r.product_name or "Невідомий", "qty": float(r.total_qty or 0), "orders": r.order_count} for r in rows]
+
+@protected_router.get("/analytics/revenue_chart")
+async def get_revenue_chart(db: AsyncSession = Depends(get_db)):
+    now = datetime.utcnow()
+    result = await db.execute(select(Order).where(Order.status != "CANCELLED"))
+    orders = result.scalars().all()
+
+    chart = {}
+    for i in range(29, -1, -1):
+        day = (now - timedelta(days=i)).strftime("%d.%m")
+        chart[day] = 0.0
+
+    for order in orders:
+        if order.created_at:
+            day_str = order.created_at.strftime("%d.%m")
+            if day_str in chart:
+                chart[day_str] += order.total_price
+
+    return [{"date": k, "revenue": round(v, 2)} for k, v in chart.items()]
 
 router.include_router(protected_router)

@@ -31,6 +31,7 @@ export default function Checkout() {
   const [cashbackSettings, setCashbackSettings] = useState<CashbackSettings | null>(null);
   const [userBalance, setUserBalance] = useState(0);
   const [useCashback, setUseCashback] = useState(false);
+  const [settlementName, setSettlementName] = useState('Самовивіз');
 
   useEffect(() => {
     const loadCashback = async () => {
@@ -46,6 +47,19 @@ export default function Checkout() {
       }
     };
     loadCashback();
+  }, []);
+
+  useEffect(() => {
+    const loadStoreInfo = async () => {
+      try {
+        const res = await fetch('/api/catalog/store_info');
+        const data = await res.json();
+        setSettlementName(data.settlement_name || 'Самовивіз');
+      } catch (err) {
+        console.error('Failed to load store info', err);
+      }
+    };
+    loadStoreInfo();
   }, []);
   
   const [loading, setLoading] = useState(false);
@@ -82,7 +96,9 @@ export default function Checkout() {
         user_id: userId,
         customer_name: formData.name,
         phone: formData.phone,
-        address: "Самовивіз (На винос)",
+        address: settlementName === 'Самовивіз'
+          ? 'Самовивіз (На винос)'
+          : `[${settlementName}] ${formData.address}`,
         comment: formData.comment || "",
         use_cashback_amount: useCashback ? Math.min(userBalance, getTotalPrice() * ((cashbackSettings?.max_pay_percent || 100) / 100)) : 0,
         items: items.map(item => ({
@@ -157,12 +173,31 @@ export default function Checkout() {
         </div>
         <div>
           <label className="block text-xs font-bold text-gray-500 mb-1.5 ml-1">Спосіб отримання</label>
-          <div className="w-full bg-brand-charcoal border border-brand-orange/15 rounded-xl px-4 py-3 text-brand-orange font-bold flex items-center gap-2 text-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-            На винос (Самовивіз)
-          </div>
+          {settlementName === 'Самовивіз' ? (
+            <div className="w-full bg-brand-charcoal border border-brand-orange/15 rounded-xl px-4 py-3 text-brand-orange font-bold flex items-center gap-2 text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+              На винос (Самовивіз)
+            </div>
+          ) : (
+            <div>
+              <div className="flex gap-2 items-center">
+                <div className="flex-shrink-0 px-3 py-3 bg-brand-orange/10 border border-brand-orange/30 rounded-xl">
+                  <span className="text-brand-orange font-bold text-sm">{settlementName}</span>
+                </div>
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  placeholder="вул. Центральна, 1..."
+                  className={`${inputClass} flex-1`}
+                />
+              </div>
+              <p className="text-xs text-neutral-600 mt-1.5 ml-1">Введіть вулицю та номер будинку</p>
+            </div>
+          )}
         </div>
         <div>
           <label className="block text-xs font-bold text-gray-500 mb-1.5 ml-1">Коментар</label>
