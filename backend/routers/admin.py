@@ -327,27 +327,32 @@ async def update_order_status(id: int, status_update: OrderStatusUpdate, db: Asy
     await manager.broadcast("update")
     
     # Send Telegram push notification
-    if bot and order.user_id:
+    if settings.BOT_TOKEN and order.user_id:
         # Check if notifications are enabled in settings
         notifications_enabled_setting = await db.get(StoreSettings, "notifications_enabled")
         notifications_enabled = notifications_enabled_setting.value.lower() == "true" if notifications_enabled_setting else True
         
         if notifications_enabled:
             status_messages = {
-                "REVIEWED": f"✅ Ваше замовлення *#{order.order_number}* переглянуто. Готуємо для вас!",
-                "PACKING": f"🔥 Замовлення *#{order.order_number}* вже готується! Зовсім скоро...",
-                "SHIPPED": f"🎉 Замовлення *#{order.order_number}* готове! Забирайте 😊",
-                "CONFIRMED": f"💚 Замовлення *#{order.order_number}* підтверджено та оплачено!{chr(10) + '🎁 Нараховано ' + str(round(order.cashback_earned or 0, 2)) + ' бонусів на ваш рахунок!' if (order.cashback_earned or 0) > 0 else ''}",
-                "CANCELLED": f"❌ Замовлення *#{order.order_number}* на жаль скасовано. Звертайтесь знову!",
+                "REVIEWED": f"✅ Ваше замовлення <b>#{order.order_number}</b> переглянуто. Готуємо для вас!",
+                "PACKING": f"🔥 Замовлення <b>#{order.order_number}</b> вже готується! Зовсім скоро...",
+                "SHIPPED": f"🎉 Замовлення <b>#{order.order_number}</b> готове! Забирайте 😊",
+                "CONFIRMED": f"💚 Замовлення <b>#{order.order_number}</b> підтверджено та оплачено!\n🎁 Нараховано {round(order.cashback_earned or 0, 2)} бонусів на ваш рахунок!" if (order.cashback_earned or 0) > 0 else f"💚 Замовлення <b>#{order.order_number}</b> підтверджено та оплачено!",
+                "CANCELLED": f"❌ Замовлення <b>#{order.order_number}</b> на жаль скасовано. Звертайтесь знову!",
             }
             msg = status_messages.get(order.status)
             if msg:
                 try:
-                    await bot.send_message(
-                        chat_id=order.user_id, 
-                        text=msg,
-                        parse_mode="Markdown"
-                    )
+                    import httpx
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        await client.post(
+                            f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage",
+                            json={
+                                "chat_id": order.user_id,
+                                "text": msg,
+                                "parse_mode": "HTML"
+                            }
+                        )
                 except Exception as e:
                     print(f"Failed to send telegram notification: {e}")
             

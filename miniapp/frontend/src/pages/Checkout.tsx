@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 import toast from 'react-hot-toast';
 import { useCartStore } from '../store/cartStore';
-import { createOrder, fetchCashbackSettings, fetchUserProfile } from '../api';
+import { createOrder, fetchCashbackSettings, fetchUserProfile, fetchStoreInfo } from '../api';
 import type { OrderCreate, CashbackSettings } from '../api';
 import { getUserId } from '../utils/user';
 
@@ -52,8 +52,7 @@ export default function Checkout() {
   useEffect(() => {
     const loadStoreInfo = async () => {
       try {
-        const res = await fetch('/api/catalog/store_info');
-        const data = await res.json();
+        const data = await fetchStoreInfo();
         setSettlementName(data.settlement_name || 'Самовивіз');
       } catch (err) {
         console.error('Failed to load store info', err);
