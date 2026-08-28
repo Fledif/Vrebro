@@ -98,7 +98,7 @@ export default function Cart() {
                     className="w-6 h-6 flex justify-center items-center text-gray-400 font-bold active:text-white"
                   >−</button>
                   <span className="font-bold min-w-[1rem] px-1 text-center text-sm whitespace-nowrap">
-                    {product.is_weighted ? (quantity >= 1 ? `${quantity} кг` : `${quantity * 1000} г`) : quantity}
+                    {product.is_weighted ? (quantity >= 1 ? `${parseFloat(Number(quantity).toFixed(3))} кг` : `${parseFloat(Number(quantity * 1000).toFixed(0))} г`) : parseFloat(Number(quantity).toFixed(3))}
                   </span>
                   <button 
                     onClick={() => increaseQuantity(product.id)}

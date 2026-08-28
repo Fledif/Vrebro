@@ -238,11 +238,14 @@ class VrebroMonitorApp(ctk.CTk):
             if stuck == 0: self.report(cat, "Завислі замовлення", "PASS", "0 необроблених замовлень (старіше 1 дня)")
             else: self.report(cat, "Завислі замовлення", "WARN", f"Знайдено {stuck} завислих замовлень")
             
-            cursor.execute("SELECT count(*) FROM products WHERE stock_quantity < 0")
-            neg_stock = cursor.fetchone()[0]
-            if neg_stock == 0: self.report(cat, "Коректність залишків", "PASS", "Негативних залишків немає")
-            else: self.report(cat, "Коректність залишків", "FAIL", f"Товарів з мінусовим залишком: {neg_stock}")
-            
+            try:
+                cursor.execute("SELECT count(*) FROM products WHERE stock_quantity < 0")
+                neg_stock = cursor.fetchone()[0]
+                if neg_stock == 0: self.report(cat, "Коректність залишків", "PASS", "Негативних залишків немає")
+                else: self.report(cat, "Коректність залишків", "FAIL", f"Товарів з мінусовим залишком: {neg_stock}")
+            except sqlite3.OperationalError:
+                self.report(cat, "Коректність залишків", "WARN", "Колонка stock_quantity відсутня у базі")
+                
             conn.close()
         except Exception as e:
             self.report(cat, "Помилка БД", "FAIL", str(e))

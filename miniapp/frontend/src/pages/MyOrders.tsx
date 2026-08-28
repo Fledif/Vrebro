@@ -225,7 +225,7 @@ export default function MyOrders() {
                 {order.items.map((item: any) => (
                   <div key={item.id} className="flex justify-between text-sm">
                     <span className="text-gray-400 line-clamp-1 flex-1 pr-2">{item.product?.name || 'Товар'}</span>
-                    <span className="text-gray-500 whitespace-nowrap text-xs">x{item.quantity}</span>
+                    <span className="text-gray-500 whitespace-nowrap text-xs">x{parseFloat(Number(item.quantity).toFixed(3))}</span>
                   </div>
                 ))}
               </div>

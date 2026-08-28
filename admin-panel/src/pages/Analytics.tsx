@@ -160,7 +160,7 @@ export default function Analytics() {
                 <div key={p.name}>
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-sm text-white truncate flex-1 pr-2">{p.name}</span>
-                    <span className="text-xs text-brand-orange font-bold whitespace-nowrap">{p.qty} шт</span>
+                    <span className="text-xs text-brand-orange font-bold whitespace-nowrap">{parseFloat(Number(p.qty).toFixed(3))} шт</span>
                   </div>
                   <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
                     <div

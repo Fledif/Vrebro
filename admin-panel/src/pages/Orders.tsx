@@ -152,7 +152,7 @@ export default function Orders() {
                       <span className="text-sm text-neutral-200">{item.product?.name || item.product_name || "Видалений товар"}</span>
                     </div>
                     <div className="text-sm font-medium">
-                      x{item.quantity} = {item.quantity * item.price_at_purchase} грн
+                      x{parseFloat(Number(item.quantity).toFixed(3))} = {Math.round(item.quantity * item.price_at_purchase)} грн
                     </div>
                   </div>
                 ))}
