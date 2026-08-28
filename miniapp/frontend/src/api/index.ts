@@ -3,7 +3,7 @@ import axios from 'axios';
 // Since we have Vite proxy configured, we can just use /api
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
-  timeout: 5000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -72,7 +72,7 @@ export const fetchProduct = async (id: number): Promise<Product> => {
 };
 
 export const createOrder = async (order: OrderCreate): Promise<any> => {
-  const { data } = await api.post('/orders/', order);
+  const { data } = await api.post('/orders', order);
   return data;
 };
 

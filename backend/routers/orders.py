@@ -14,7 +14,7 @@ from websocket_manager import manager
 
 router = APIRouter()
 
-@router.post("/", response_model=OrderSchema, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=OrderSchema, status_code=status.HTTP_201_CREATED)
 async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_db)):
     if not order_data.items:
         raise HTTPException(status_code=400, detail="Order must have items")
