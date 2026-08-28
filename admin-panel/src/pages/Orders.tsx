@@ -18,14 +18,22 @@ export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (isBackground = false) => {
     try {
       const res = await api.get('/admin/orders');
-      setOrders(res.data.filter((o: Order) => o.status !== 'CONFIRMED'));
+      const filtered = res.data.filter((o: Order) => o.status !== 'CONFIRMED');
+      
+      setOrders(prev => {
+        // Play sound if a new order arrived and we already had orders loaded
+        if (prev.length > 0 && filtered.length > prev.length) {
+          playNotificationSound();
+        }
+        return filtered;
+      });
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
@@ -85,8 +93,8 @@ export default function Orders() {
     
     connectWs();
     
-    // Fallback polling every 5 seconds to guarantee data freshness
-    interval = setInterval(fetchOrders, 5000);
+    // Fallback polling every 1.5 seconds to guarantee instant data freshness
+    interval = setInterval(() => fetchOrders(true), 1500);
     
     return () => {
       clearTimeout(reconnectTimeout);
