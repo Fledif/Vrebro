@@ -118,12 +118,18 @@ async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_d
     # Send admin notifications
     if settings.BOT_TOKEN:
         try:
-            items_text = "\n".join([f"- {i['product_name']} x{i['quantity']} ({i['price_at_purchase']} грн)" for i in validated_items])
+            import html
+            safe_name = html.escape(new_order.customer_name or "")
+            safe_phone = html.escape(new_order.phone or "")
+            safe_address = html.escape(new_order.address or "")
+            safe_comment = html.escape(new_order.comment or "-")
+            
+            items_text = "\n".join([f"- {html.escape(i['product_name'])} x{i['quantity']} ({i['price_at_purchase']} грн)" for i in validated_items])
             msg = f"🚨 <b>НОВЕ ЗАМОВЛЕННЯ {new_order.order_number}</b>\n\n" \
-                  f"👤 Ім'я: {new_order.customer_name}\n" \
-                  f"📞 Тел: {new_order.phone}\n" \
-                  f"📍 Адреса: {new_order.address}\n" \
-                  f"💬 Комент: {new_order.comment or '-'}\n\n" \
+                  f"👤 Ім'я: {safe_name}\n" \
+                  f"📞 Тел: {safe_phone}\n" \
+                  f"📍 Адреса: {safe_address}\n" \
+                  f"💬 Комент: {safe_comment}\n\n" \
                   f"🛒 Товари:\n{items_text}\n\n" \
                   f"💰 Сума: <b>{new_order.total_price} грн</b>"
                   
@@ -137,14 +143,16 @@ async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_d
                 for admin_row in admins:
                     if admin_row[0]:
                         try:
-                            await client.post(
+                            resp = await client.post(
                                 f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage",
                                 json={"chat_id": admin_row[0], "text": msg, "parse_mode": "HTML"}
                             )
+                            if resp.status_code != 200:
+                                print(f"Telegram API error {resp.status_code} for admin {admin_row[0]}: {resp.text}")
                         except Exception as e:
                             print(f"Failed to send to admin {admin_row[0]}: {e}")
         except Exception as e:
-            await db.rollback()
+            # We don't rollback here because the order was successfully created.
             print(f"Failed to process admin notifications: {e}")
             
     # Send customer notification

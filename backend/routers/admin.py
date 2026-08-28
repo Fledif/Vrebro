@@ -345,7 +345,7 @@ async def update_order_status(id: int, status_update: OrderStatusUpdate, db: Asy
                 try:
                     import httpx
                     async with httpx.AsyncClient(timeout=5.0) as client:
-                        await client.post(
+                        resp = await client.post(
                             f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage",
                             json={
                                 "chat_id": order.user_id,
@@ -353,6 +353,8 @@ async def update_order_status(id: int, status_update: OrderStatusUpdate, db: Asy
                                 "parse_mode": "HTML"
                             }
                         )
+                        if resp.status_code != 200:
+                            print(f"Telegram API error {resp.status_code} sending status to {order.user_id}: {resp.text}")
                 except Exception as e:
                     print(f"Failed to send telegram notification: {e}")
             

@@ -116,17 +116,23 @@ export default function Checkout() {
       return;
     }
     
-    // Strict phone validation: only digits, length must be 10 (e.g. 050...) or 12 (38050...)
+    // Strict phone validation: must start with 0 (10 digits) or 380 (12 digits)
     const cleanPhone = formData.phone.replace(/\D/g, '');
-    if (cleanPhone.length !== 10 && cleanPhone.length !== 12) {
-      setError("Введіть коректний номер телефону (наприклад: 0501234567)");
+    let isValidPhone = false;
+    if (cleanPhone.length === 10 && cleanPhone.startsWith('0')) isValidPhone = true;
+    if (cleanPhone.length === 12 && cleanPhone.startsWith('380')) isValidPhone = true;
+    if (!isValidPhone) {
+      setError("Введіть коректний український номер телефону (починається з 0 або 380)");
       return;
     }
     
     // Strict address validation
-    if (settlementName !== 'Самовивіз' && formData.address.trim().length < 4) {
-      setError("Введіть коректну адресу (вулиця, будинок)");
-      return;
+    if (settlementName !== 'Самовивіз') {
+      const cleanAddress = formData.address.trim();
+      if (cleanAddress.length < 5 || !/[а-яА-Яa-zA-ZіІїЇєЄ]/.test(cleanAddress)) {
+        setError("Введіть повноцінну адресу доставки (вулиця, будинок)");
+        return;
+      }
     }
 
     try {
