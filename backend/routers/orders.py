@@ -144,6 +144,7 @@ async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_d
                         except Exception as e:
                             print(f"Failed to send to admin {admin_row[0]}: {e}")
         except Exception as e:
+            await db.rollback()
             print(f"Failed to process admin notifications: {e}")
             
     # Send customer notification
@@ -159,6 +160,7 @@ async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_d
                     json={"chat_id": new_order.user_id, "text": customer_msg, "parse_mode": "HTML"}
                 )
         except Exception as e:
+            await db.rollback()
             print(f"Failed to send customer notification: {e}")
     
     # Eager load the items for the response

@@ -9,6 +9,7 @@ class User(Base):
     first_name = Column(String, nullable=True)
     username = Column(String, nullable=True)
     phone = Column(String, nullable=True)
+    role = Column(String, default='customer')
     cashback_balance = Column(Float, default=0.0)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
