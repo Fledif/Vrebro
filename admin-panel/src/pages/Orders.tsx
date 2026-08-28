@@ -58,23 +58,43 @@ export default function Orders() {
   useEffect(() => {
     fetchOrders();
     
-    const wsUrl = api.defaults.baseURL?.replace('http', 'ws') + '/admin/ws/orders';
-    const ws = new WebSocket(wsUrl);
+    let ws: WebSocket;
+    let reconnectTimeout: ReturnType<typeof setTimeout>;
+    let interval: ReturnType<typeof setInterval>;
     
-    ws.onopen = () => {
-      const token = localStorage.getItem('admin_token');
-      if (token) ws.send(token);
+    const connectWs = () => {
+      const wsUrl = api.defaults.baseURL?.replace('http', 'ws') + '/admin/ws/orders';
+      ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        const token = localStorage.getItem('admin_token');
+        if (token) ws.send(token);
+      };
+      
+      ws.onmessage = (event) => {
+        if (event.data === 'update') {
+          playNotificationSound();
+          fetchOrders();
+        }
+      };
+      
+      ws.onclose = () => {
+        reconnectTimeout = setTimeout(connectWs, 3000);
+      };
     };
     
-    ws.onmessage = (event) => {
-      if (event.data === 'update') {
-        playNotificationSound();
-        fetchOrders();
-      }
-    };
+    connectWs();
+    
+    // Fallback polling every 30 seconds to guarantee data freshness
+    interval = setInterval(fetchOrders, 30000);
     
     return () => {
-      ws.close();
+      clearTimeout(reconnectTimeout);
+      clearInterval(interval);
+      if (ws) {
+        ws.onclose = null; // Prevent reconnect on unmount
+        ws.close();
+      }
     };
   }, []);
 
