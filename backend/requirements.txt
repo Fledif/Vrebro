@@ -12,3 +12,4 @@ greenlet
 httpx
 PyJWT
 bcrypt
+psutil
