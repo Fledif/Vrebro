@@ -3,113 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VreBRO Monitor</title>
+    <title>VreBRO Monitor Pro</title>
     <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#111111">
+    <meta name="theme-color" content="#0a0a0a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #111; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        .card { background-color: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
-        .header { position: sticky; top: 0; background: rgba(17, 17, 17, 0.9); backdrop-filter: blur(10px); padding: 16px; z-index: 10; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-        .status-badge { padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
-        .pass { background-color: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid #2ecc71; }
-        .warn { background-color: rgba(241, 196, 15, 0.2); color: #f1c40f; border: 1px solid #f1c40f; }
-        .fail { background-color: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid #e74c3c; }
+        body { background-color: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .card { background-color: #141414; border: 1px solid #262626; border-radius: 16px; padding: 20px; margin-bottom: 16px; transition: all 0.3s ease; }
+        .header { position: sticky; top: 0; background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(12px); padding: 16px 20px; z-index: 10; border-bottom: 1px solid #262626; display: flex; justify-content: space-between; align-items: center; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s; }
+        .pass { background-color: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.3); }
+        .warn { background-color: rgba(241, 196, 15, 0.15); color: #f1c40f; border: 1px solid rgba(241, 196, 15, 0.3); }
+        .fail { background-color: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); }
         
         .pulse { animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        
+        .critical-alert { border-color: rgba(231, 76, 60, 0.8) !important; box-shadow: 0 0 15px rgba(231, 76, 60, 0.15); animation: border-pulse 2s infinite; }
+        @keyframes border-pulse { 0% { border-color: rgba(231, 76, 60, 0.3); } 50% { border-color: rgba(231, 76, 60, 0.8); } 100% { border-color: rgba(231, 76, 60, 0.3); } }
+
+        .sparkline { width: 100%; height: 40px; margin-top: 8px; }
     </style>
 </head>
-<body class="pb-8">
+<body class="pb-10">
 
     <div class="header">
         <div>
-            <h1 class="text-xl font-bold">VreBRO Monitor</h1>
-            <div class="text-xs text-gray-400 mt-1 flex items-center">
+            <h1 class="text-xl font-bold tracking-tight">VreBRO Monitor</h1>
+            <div class="text-[11px] text-gray-400 mt-1 flex items-center font-medium">
                 <span id="live-indicator" class="w-2 h-2 rounded-full bg-green-500 mr-2 pulse"></span>
-                Оновлено: <span id="timestamp">--:--:--</span>
+                LIVE • <span id="timestamp" class="ml-1">--:--:--</span>
             </div>
         </div>
-        <button id="refresh-btn" class="bg-blue-600 px-4 py-2 rounded-lg text-sm font-bold active:bg-blue-700 transition">Оновити</button>
+        <button id="refresh-btn" class="bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 px-4 py-2 rounded-xl text-xs font-bold transition-all text-white">ОНОВИТИ</button>
     </div>
 
-    <div class="p-4 max-w-lg mx-auto">
+    <div class="p-5 max-w-lg mx-auto space-y-6">
         <!-- System -->
-        <h2 class="text-gray-400 text-sm font-bold mb-2 uppercase tracking-wider">Система</h2>
-        <div class="card">
-            <div class="flex justify-between items-center mb-3">
-                <div class="font-semibold">Процесор (CPU)</div>
-                <div id="cpu-status" class="status-badge">Завантаження...</div>
+        <div>
+            <h2 class="text-gray-500 text-[10px] font-bold mb-3 uppercase tracking-widest pl-1">Ресурси Сервера</h2>
+            
+            <div class="card" id="cpu-card">
+                <div class="flex justify-between items-center mb-1">
+                    <div class="font-bold text-sm text-gray-200">Процесор (CPU)</div>
+                    <div id="cpu-status" class="status-badge">...</div>
+                </div>
+                <div class="text-xs text-gray-400 mb-2" id="cpu-details">--</div>
+                <svg id="spark-cpu" class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none"></svg>
             </div>
-            <div class="text-sm text-gray-400" id="cpu-details">--</div>
             
-            <div class="h-[1px] bg-neutral-800 my-3"></div>
-            
-            <div class="flex justify-between items-center mb-3">
-                <div class="font-semibold">Оперативна пам'ять</div>
-                <div id="ram-status" class="status-badge">Завантаження...</div>
+            <div class="card" id="ram-card">
+                <div class="flex justify-between items-center mb-1">
+                    <div class="font-bold text-sm text-gray-200">Оперативна пам'ять</div>
+                    <div id="ram-status" class="status-badge">...</div>
+                </div>
+                <div class="text-xs text-gray-400 mb-2" id="ram-details">--</div>
+                <svg id="spark-ram" class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none"></svg>
             </div>
-            <div class="text-sm text-gray-400" id="ram-details">--</div>
-            
-            <div class="h-[1px] bg-neutral-800 my-3"></div>
-            
-            <div class="flex justify-between items-center mb-3">
-                <div class="font-semibold">Місце на диску</div>
-                <div id="disk-status" class="status-badge">Завантаження...</div>
+
+            <div class="card">
+                <div class="flex justify-between items-center">
+                    <div class="font-bold text-sm text-gray-200">Місце на диску</div>
+                    <div id="disk-status" class="status-badge">...</div>
+                </div>
+                <div class="text-xs text-gray-400 mt-1" id="disk-details">--</div>
             </div>
-            <div class="text-sm text-gray-400" id="disk-details">--</div>
         </div>
 
-        <!-- Database -->
-        <h2 class="text-gray-400 text-sm font-bold mb-2 mt-6 uppercase tracking-wider">База даних</h2>
-        <div class="card">
-            <div class="flex justify-between items-center mb-3">
-                <div class="font-semibold">Статус SQLite</div>
-                <div id="db-status" class="status-badge">Завантаження...</div>
+        <!-- Database & API -->
+        <div>
+            <h2 class="text-gray-500 text-[10px] font-bold mb-3 mt-4 uppercase tracking-widest pl-1">База Даних & API</h2>
+            <div class="card" id="api-card">
+                <div class="flex justify-between items-center mb-1">
+                    <div class="font-bold text-sm text-gray-200">API Latency</div>
+                    <div id="latency-status" class="status-badge">...</div>
+                </div>
+                <div class="text-xs text-gray-400 mb-2" id="latency-details">Середній час відповіді сервера</div>
+                <svg id="spark-latency" class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none"></svg>
+                
+                <div class="h-[1px] bg-neutral-800 my-4"></div>
+                
+                <div class="flex justify-between items-center mb-1">
+                    <div class="font-bold text-sm text-gray-200">Ping Бази Даних</div>
+                    <div id="db-status" class="status-badge">...</div>
+                </div>
+                <div class="text-xs text-gray-400 mb-2" id="db-details">--</div>
+                <svg id="spark-db" class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none"></svg>
+                
+                <div class="h-[1px] bg-neutral-800 my-4"></div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <div class="text-xs text-gray-400 mb-1">Завислі замовлення</div>
+                        <div id="orders-status" class="status-badge inline-block">...</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-400 mb-1">Мінусові залишки</div>
+                        <div id="stock-status" class="status-badge inline-block">...</div>
+                    </div>
+                </div>
             </div>
-            <div class="text-sm text-gray-400" id="db-details">--</div>
-            
-            <div class="h-[1px] bg-neutral-800 my-3"></div>
-            
-            <div class="flex justify-between items-center mb-3">
-                <div class="font-semibold">Завислі замовлення</div>
-                <div id="orders-status" class="status-badge">Завантаження...</div>
-            </div>
-            <div class="text-sm text-gray-400" id="orders-details">Старіше 1 дня без обробки</div>
-            
-            <div class="h-[1px] bg-neutral-800 my-3"></div>
-            
-            <div class="flex justify-between items-center mb-3">
-                <div class="font-semibold">Мінусові залишки</div>
-                <div id="stock-status" class="status-badge">Завантаження...</div>
-            </div>
-            <div class="text-sm text-gray-400" id="stock-details">Товари, яких немає, але продані</div>
         </div>
 
         <!-- Telegram -->
-        <h2 class="text-gray-400 text-sm font-bold mb-2 mt-6 uppercase tracking-wider">Telegram Bot</h2>
-        <div class="card">
-            <div class="flex justify-between items-center mb-3">
-                <div class="font-semibold">Підключення (Webhook)</div>
-                <div id="tg-status" class="status-badge">Завантаження...</div>
+        <div>
+            <h2 class="text-gray-500 text-[10px] font-bold mb-3 mt-4 uppercase tracking-widest pl-1">Telegram Bot</h2>
+            <div class="card" id="tg-card">
+                <div class="flex justify-between items-center mb-1">
+                    <div class="font-bold text-sm text-gray-200">Підключення (Webhook)</div>
+                    <div id="tg-status" class="status-badge">...</div>
+                </div>
+                <div class="text-[10px] text-gray-500 break-all mb-4" id="tg-details">--</div>
+                
+                <div class="flex justify-between items-center">
+                    <div class="text-sm font-medium text-gray-300">Черга повідомлень</div>
+                    <div id="tg-queue-status" class="text-lg font-bold text-white">0</div>
+                </div>
             </div>
-            <div class="text-sm text-gray-400 break-all" id="tg-details">--</div>
-            
-            <div class="h-[1px] bg-neutral-800 my-3"></div>
-            
-            <div class="flex justify-between items-center mb-3">
-                <div class="font-semibold">Черга повідомлень</div>
-                <div id="tg-queue-status" class="status-badge">Завантаження...</div>
-            </div>
-            <div class="text-sm text-gray-400" id="tg-queue-details">Необроблені повідомлення від клієнтів</div>
         </div>
     </div>
 
     <script>
+        const historyData = {
+            cpu: [],
+            ram: [],
+            ping: [],
+            latency: []
+        };
+        const MAX_HISTORY = 40; // 2 minutes history at 3s updates
+
+        function updateHistory(key, value) {
+            historyData[key].push(value);
+            if (historyData[key].length > MAX_HISTORY) {
+                historyData[key].shift();
+            }
+        }
+
+        function renderSparkline(svgId, data, color) {
+            const svg = document.getElementById(svgId);
+            if (!svg || data.length < 2) return;
+            
+            const width = 200;
+            const height = 40;
+            
+            let maxVal = Math.max(...data);
+            let minVal = Math.min(...data);
+            
+            // Add padding so flat lines render in middle
+            if (maxVal === minVal) {
+                maxVal += 10;
+                minVal = Math.max(0, minVal - 10);
+            }
+            
+            // For percentage metrics (cpu, ram), lock max to 100 if close
+            if (svgId === 'spark-cpu' || svgId === 'spark-ram') {
+                maxVal = 100;
+                minVal = 0;
+            }
+            
+            const range = maxVal - minVal || 1;
+            const step = width / (MAX_HISTORY - 1);
+            const offset = MAX_HISTORY - data.length;
+            
+            let pathD = "";
+            for (let i = 0; i < data.length; i++) {
+                const x = (i + offset) * step;
+                const y = height - 2 - ((data[i] - minVal) / range) * (height - 4);
+                pathD += (i === 0 ? "M" : "L") + `${x.toFixed(1)},${y.toFixed(1)} `;
+            }
+            
+            const fillD = pathD + `L${width},${height} L${offset * step},${height} Z`;
+            
+            svg.innerHTML = `
+                <path d="${fillD}" fill="${color}" opacity="0.15" />
+                <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            `;
+        }
+
         function setBadge(id, status, text) {
             const el = document.getElementById(id);
+            if(!el) return;
             el.className = 'status-badge ' + (status === 'PASS' ? 'pass' : status === 'WARN' ? 'warn' : 'fail');
             el.innerText = text;
         }
@@ -120,33 +195,46 @@
                 const data = await res.json();
                 
                 document.getElementById('timestamp').innerText = data.timestamp;
-                document.getElementById('live-indicator').classList.remove('bg-red-500');
-                document.getElementById('live-indicator').classList.add('bg-green-500');
+                document.getElementById('live-indicator').classList.replace('bg-red-500', 'bg-green-500');
 
-                // System
+                // System - CPU
                 const cpu = data.system.cpu;
-                setBadge('cpu-status', cpu < 85 ? 'PASS' : 'WARN', cpu < 85 ? 'OK' : 'ВИСОКЕ');
+                updateHistory('cpu', cpu);
+                setBadge('cpu-status', cpu < 80 ? 'PASS' : cpu < 95 ? 'WARN' : 'FAIL', cpu < 80 ? 'OK' : cpu < 95 ? 'ВИСОКЕ' : 'КРИТИЧНЕ');
                 document.getElementById('cpu-details').innerText = `Завантаження: ${cpu}%`;
+                renderSparkline('spark-cpu', historyData.cpu, cpu >= 95 ? '#e74c3c' : cpu >= 80 ? '#f1c40f' : '#2ecc71');
+                document.getElementById('cpu-card').className = cpu >= 95 ? 'card critical-alert' : 'card';
 
+                // System - RAM
                 const ram = data.system.ram_percent;
-                setBadge('ram-status', ram < 90 ? 'PASS' : 'WARN', ram < 90 ? 'OK' : 'МАЛО ПАМ\'ЯТІ');
+                updateHistory('ram', ram);
+                setBadge('ram-status', ram < 85 ? 'PASS' : ram < 95 ? 'WARN' : 'FAIL', ram < 85 ? 'OK' : ram < 95 ? 'ВИСОКЕ' : 'КРИТИЧНЕ');
                 document.getElementById('ram-details').innerText = `Використано ${ram}% (${data.system.ram_used_mb}MB / ${data.system.ram_total_mb}MB)`;
+                renderSparkline('spark-ram', historyData.ram, ram >= 95 ? '#e74c3c' : ram >= 85 ? '#f1c40f' : '#2ecc71');
+                document.getElementById('ram-card').className = ram >= 95 ? 'card critical-alert' : 'card';
 
+                // Disk
                 const disk = data.system.disk_percent;
                 setBadge('disk-status', disk < 90 ? 'PASS' : 'WARN', disk < 90 ? 'OK' : 'МАЛО МІСЦЯ');
                 document.getElementById('disk-details').innerText = `Зайнято ${disk}%`;
+                
+                // API Latency
+                const latency = data.system.api_latency_ms || 0;
+                updateHistory('latency', latency);
+                setBadge('latency-status', latency < 300 ? 'PASS' : latency < 1000 ? 'WARN' : 'FAIL', latency < 300 ? 'ШВИДКО' : latency < 1000 ? 'ПОВІЛЬНО' : 'ДУЖЕ ПОВІЛЬНО');
+                document.getElementById('latency-details').innerText = `Середній час відповіді: ${latency} мс`;
+                renderSparkline('spark-latency', historyData.latency, latency >= 1000 ? '#e74c3c' : latency >= 300 ? '#f1c40f' : '#3498db');
 
                 // DB
                 const db = data.database;
                 if (db.status === 'OK') {
-                    setBadge('db-status', 'PASS', 'ПІДКЛЮЧЕНО');
+                    updateHistory('ping', db.ping_ms);
+                    setBadge('db-status', db.ping_ms < 50 ? 'PASS' : 'WARN', db.ping_ms < 50 ? 'OK' : 'ПІНГ');
                     document.getElementById('db-details').innerText = `Пінг: ${db.ping_ms} мс`;
+                    renderSparkline('spark-db', historyData.ping, db.ping_ms >= 100 ? '#e74c3c' : db.ping_ms >= 50 ? '#f1c40f' : '#9b59b6');
 
                     setBadge('orders-status', db.stuck_orders > 0 ? 'WARN' : 'PASS', db.stuck_orders > 0 ? db.stuck_orders : 'НЕМАЄ');
-                    document.getElementById('orders-details').innerText = `Необроблених: ${db.stuck_orders}`;
-
                     setBadge('stock-status', db.negative_stock > 0 ? 'FAIL' : 'PASS', db.negative_stock > 0 ? db.negative_stock : 'НОРМА');
-                    document.getElementById('stock-details').innerText = `Товарів з мінусом: ${db.negative_stock}`;
                 } else {
                     setBadge('db-status', 'FAIL', 'ПОМИЛКА');
                     document.getElementById('db-details').innerText = db.error;
@@ -158,16 +246,16 @@
                     setBadge('tg-status', tg.url ? 'PASS' : 'WARN', tg.url ? 'OK' : 'ПОМИЛКА');
                     document.getElementById('tg-details').innerText = tg.url ? `URL: ${tg.url}` : 'Webhook не налаштовано';
 
-                    setBadge('tg-queue-status', tg.pending_updates > 50 ? 'WARN' : 'PASS', tg.pending_updates > 50 ? tg.pending_updates : '0 В ЧЕРЗІ');
-                    document.getElementById('tg-queue-details').innerText = `Необроблених повідомлень: ${tg.pending_updates}`;
+                    document.getElementById('tg-queue-status').innerText = tg.pending_updates;
+                    document.getElementById('tg-queue-status').className = tg.pending_updates > 50 ? 'text-lg font-bold text-red-500' : 'text-lg font-bold text-green-500';
                 } else {
                     setBadge('tg-status', 'FAIL', 'ВІДКЛЮЧЕНО');
-                    document.getElementById('tg-details').innerText = tg.error;
+                    document.getElementById('tg-details').innerText = tg.error || 'Немає з\'єднання';
                 }
             } catch (err) {
-                document.getElementById('live-indicator').classList.remove('bg-green-500');
-                document.getElementById('live-indicator').classList.add('bg-red-500');
-                document.getElementById('timestamp').innerText = 'Втрачено з\'єднання';
+                document.getElementById('live-indicator').classList.replace('bg-green-500', 'bg-red-500');
+                document.getElementById('timestamp').innerText = 'Втрачено зв\'язок';
+                document.getElementById('cpu-card').className = 'card critical-alert';
             }
         }
 
@@ -176,9 +264,12 @@
 
         // Refresh button
         document.getElementById('refresh-btn').addEventListener('click', () => {
-            document.getElementById('refresh-btn').innerText = '...';
+            const btn = document.getElementById('refresh-btn');
+            btn.innerText = '...';
+            btn.classList.add('opacity-50');
             fetchMetrics().then(() => {
-                document.getElementById('refresh-btn').innerText = 'Оновити';
+                btn.innerText = 'ОНОВИТИ';
+                btn.classList.remove('opacity-50');
             });
         });
 

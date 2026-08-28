@@ -2,7 +2,7 @@ import os
 import time
 import psutil
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from datetime import datetime
 from database import engine
 from sqlalchemy import text
@@ -11,14 +11,24 @@ router = APIRouter(prefix="/api/monitor", tags=["Monitor"])
 
 ENV_PATH = ".env"
 
+@router.get("/healthz")
+async def healthz():
+    """Ultra-fast unauthenticated endpoint for Render health checks or UptimeRobot"""
+    return {"status": "ok"}
+
 @router.get("/health")
-async def get_health_metrics():
+async def get_health_metrics(request: Request):
     metrics = {
         "timestamp": datetime.now().strftime("%H:%M:%S"),
         "system": {},
         "database": {},
         "telegram": {}
     }
+    
+    # Calculate API latency
+    latencies = getattr(request.app.state, 'latencies', [])
+    avg_latency = sum(latencies) / len(latencies) if latencies else 0
+    metrics["system"]["api_latency_ms"] = round(avg_latency, 2)
     
     # 1. System
     metrics["system"]["cpu"] = psutil.cpu_percent(interval=None)  # None prevents blocking the async thread

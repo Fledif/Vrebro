@@ -18,9 +18,43 @@ from bot import bot, dp
 
 import sqlite3
 import httpx
+import time
+import collections
 
 from aiogram.types import Update
 from fastapi import Request
+
+async def monitor_alerts():
+    """Background task to check system health and send Telegram alerts to admins."""
+    last_alert_time = 0
+    while True:
+        await asyncio.sleep(60)
+        try:
+            import psutil
+            cpu = psutil.cpu_percent(interval=None)
+            mem = psutil.virtual_memory().percent
+            
+            if cpu >= 95 or mem >= 95:
+                now = time.time()
+                if now - last_alert_time > 900:  # max 1 alert per 15 mins
+                    msg = f"⚠️ <b>КРИТИЧНЕ НАВАНТАЖЕННЯ SERVER</b>\n\n🖥 CPU: {cpu}%\n🧠 RAM: {mem}%\n\n<i>Перевірте сервер або перезавантажте систему!</i>"
+                    from sqlalchemy import text
+                    async with engine.connect() as conn:
+                        res = await conn.execute(text("SELECT telegram_id FROM users WHERE role IN ('admin', 'superadmin')"))
+                        admins = res.fetchall()
+                    
+                    bot_token = os.getenv("BOT_TOKEN")
+                    if bot_token and admins:
+                        async with httpx.AsyncClient(timeout=5.0) as client:
+                            for admin_row in admins:
+                                if admin_row[0]:
+                                    await client.post(
+                                        f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                                        json={"chat_id": admin_row[0], "text": msg, "parse_mode": "HTML"}
+                                    )
+                    last_alert_time = now
+        except Exception as e:
+            print(f"Alert task error: {e}")
 
 async def keep_awake():
     """Background task to ping the server every 3 minutes to keep it awake on Render."""
@@ -35,6 +69,7 @@ async def keep_awake():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    app.state.latencies = collections.deque(maxlen=100)
     # Auto-migrate database for Render's persistent disk
     try:
         with sqlite3.connect("vrebro.db") as conn:
@@ -132,14 +167,29 @@ async def lifespan(app: FastAPI):
             print("Telegram Bot webhook NOT SET: RENDER_EXTERNAL_URL or WEB_APP_URL missing.")
         
     keep_awake_task = asyncio.create_task(keep_awake())
+    monitor_alerts_task = asyncio.create_task(monitor_alerts())
         
     yield
     
 
     if keep_awake_task:
         keep_awake_task.cancel()
+    if monitor_alerts_task:
+        monitor_alerts_task.cancel()
 
 app = FastAPI(title="VreBRO Unified Backend", lifespan=lifespan)
+
+from starlette.middleware.base import BaseHTTPMiddleware
+class LatencyMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        start = time.time()
+        response = await call_next(request)
+        latency = (time.time() - start) * 1000
+        if hasattr(request.app.state, 'latencies'):
+            request.app.state.latencies.append(latency)
+        return response
+
+app.add_middleware(LatencyMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
