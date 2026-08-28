@@ -74,6 +74,39 @@ export default function Checkout() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleLocation = () => {
+    if (navigator.geolocation) {
+      setLoading(true);
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          const data = await res.json();
+          if (data && data.address) {
+            const street = data.address.road || data.address.pedestrian || "";
+            const house = data.address.house_number || "";
+            const addr = `${street} ${house}`.trim();
+            if (addr) {
+              setFormData(prev => ({ ...prev, address: addr }));
+              toast.success("Адресу успішно знайдено!");
+            } else {
+              toast.error("Не вдалося визначити точну вулицю");
+            }
+          }
+        } catch (e) {
+          toast.error("Помилка доступу до сервісу карт");
+        } finally {
+          setLoading(false);
+        }
+      }, () => {
+        setLoading(false);
+        toast.error("Доступ до геолокації заборонено в налаштуваннях вашого пристрою");
+      }, { enableHighAccuracy: true });
+    } else {
+      toast.error("Ваш пристрій не підтримує геолокацію");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -82,8 +115,17 @@ export default function Checkout() {
       setError("Введіть коректне ім'я");
       return;
     }
-    if (formData.phone.trim().length < 10) {
-      setError("Введіть коректний номер телефону");
+    
+    // Strict phone validation: only digits, length must be 10 (e.g. 050...) or 12 (38050...)
+    const cleanPhone = formData.phone.replace(/\D/g, '');
+    if (cleanPhone.length !== 10 && cleanPhone.length !== 12) {
+      setError("Введіть коректний номер телефону (наприклад: 0501234567)");
+      return;
+    }
+    
+    // Strict address validation
+    if (settlementName !== 'Самовивіз' && formData.address.trim().length < 4) {
+      setError("Введіть коректну адресу (вулиця, будинок)");
       return;
     }
 
@@ -114,7 +156,7 @@ export default function Checkout() {
       
       setSuccess(true);
       clearCart();
-      toast.success("Переміщено до профілю, там можна переглянути статус замовлення", { duration: 4000 });
+      toast.success("Замовлення оформлено", { duration: 4000 });
       if (window.Telegram?.WebApp?.HapticFeedback) {
         window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
       }
@@ -194,7 +236,21 @@ export default function Checkout() {
                   className={`${inputClass} flex-1`}
                 />
               </div>
-              <p className="text-xs text-neutral-600 mt-1.5 ml-1">Введіть вулицю та номер будинку</p>
+              <div className="flex justify-between items-center mt-1.5 ml-1">
+                <p className="text-xs text-neutral-600">Введіть вулицю та номер будинку</p>
+                <button 
+                  type="button" 
+                  onClick={handleLocation}
+                  disabled={loading}
+                  className="flex items-center gap-1 text-xs font-bold text-brand-orange hover:text-orange-400 active:scale-95 transition-all"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  {loading ? 'Шукаю...' : 'Визначити адресу'}
+                </button>
+              </div>
             </div>
           )}
         </div>

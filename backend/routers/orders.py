@@ -115,7 +115,8 @@ async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_d
     
     await manager.broadcast("update")
     
-    if bot and settings.ADMIN_CHAT_ID:
+    # Send admin notifications
+    if bot:
         try:
             items_text = "\n".join([f"- {i['product_name']} x{i['quantity']} ({i['price_at_purchase']} грн)" for i in validated_items])
             msg = f"🚨 **НОВЕ ЗАМОВЛЕННЯ {new_order.order_number}**\n\n" \
@@ -125,10 +126,22 @@ async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_d
                   f"💬 Комент: {new_order.comment or '-'}\n\n" \
                   f"🛒 Товари:\n{items_text}\n\n" \
                   f"💰 Сума: **{new_order.total_price} грн**"
-            await bot.send_message(chat_id=settings.ADMIN_CHAT_ID, text=msg, parse_mode="Markdown")
-        except Exception as e:
-            print(f"Failed to send admin notification: {e}")
+                  
+            # Get all admins from DB
+            from sqlalchemy import text
+            res = await db.execute(text("SELECT telegram_id FROM users WHERE role IN ('admin', 'superadmin')"))
+            admins = res.fetchall()
             
+            for admin_row in admins:
+                if admin_row[0]:
+                    try:
+                        await bot.send_message(chat_id=admin_row[0], text=msg, parse_mode="Markdown")
+                    except Exception as e:
+                        print(f"Failed to send to admin {admin_row[0]}: {e}")
+        except Exception as e:
+            print(f"Failed to process admin notifications: {e}")
+            
+    # Send customer notification
     if bot and new_order.user_id:
         try:
             customer_msg = f"✅ Ваше замовлення **{new_order.order_number}** успішно оформлено!\n\n" \
