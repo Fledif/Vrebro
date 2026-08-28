@@ -85,8 +85,8 @@ export default function Orders() {
     
     connectWs();
     
-    // Fallback polling every 30 seconds to guarantee data freshness
-    interval = setInterval(fetchOrders, 30000);
+    // Fallback polling every 5 seconds to guarantee data freshness
+    interval = setInterval(fetchOrders, 5000);
     
     return () => {
       clearTimeout(reconnectTimeout);
