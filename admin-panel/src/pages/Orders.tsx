@@ -18,7 +18,7 @@ export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchOrders = async (isBackground = false) => {
+  const fetchOrders = async (isBackground: boolean | any = false) => {
     try {
       const res = await api.get('/admin/orders');
       const filtered = res.data.filter((o: Order) => o.status !== 'CONFIRMED');
@@ -33,7 +33,7 @@ export default function Orders() {
     } catch (err) {
       console.error(err);
     } finally {
-      if (!isBackground) setLoading(false);
+      if (isBackground !== true) setLoading(false);
     }
   };
 
