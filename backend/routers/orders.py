@@ -116,38 +116,48 @@ async def create_order(order_data: OrderCreate, db: AsyncSession = Depends(get_d
     await manager.broadcast("update")
     
     # Send admin notifications
-    if bot:
+    if settings.BOT_TOKEN:
         try:
             items_text = "\n".join([f"- {i['product_name']} x{i['quantity']} ({i['price_at_purchase']} грн)" for i in validated_items])
-            msg = f"🚨 **НОВЕ ЗАМОВЛЕННЯ {new_order.order_number}**\n\n" \
+            msg = f"🚨 <b>НОВЕ ЗАМОВЛЕННЯ {new_order.order_number}</b>\n\n" \
                   f"👤 Ім'я: {new_order.customer_name}\n" \
                   f"📞 Тел: {new_order.phone}\n" \
                   f"📍 Адреса: {new_order.address}\n" \
                   f"💬 Комент: {new_order.comment or '-'}\n\n" \
                   f"🛒 Товари:\n{items_text}\n\n" \
-                  f"💰 Сума: **{new_order.total_price} грн**"
+                  f"💰 Сума: <b>{new_order.total_price} грн</b>"
                   
             # Get all admins from DB
             from sqlalchemy import text
             res = await db.execute(text("SELECT telegram_id FROM users WHERE role IN ('admin', 'superadmin')"))
             admins = res.fetchall()
             
-            for admin_row in admins:
-                if admin_row[0]:
-                    try:
-                        await bot.send_message(chat_id=admin_row[0], text=msg, parse_mode="Markdown")
-                    except Exception as e:
-                        print(f"Failed to send to admin {admin_row[0]}: {e}")
+            import httpx
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                for admin_row in admins:
+                    if admin_row[0]:
+                        try:
+                            await client.post(
+                                f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage",
+                                json={"chat_id": admin_row[0], "text": msg, "parse_mode": "HTML"}
+                            )
+                        except Exception as e:
+                            print(f"Failed to send to admin {admin_row[0]}: {e}")
         except Exception as e:
             print(f"Failed to process admin notifications: {e}")
             
     # Send customer notification
-    if bot and new_order.user_id:
+    if settings.BOT_TOKEN and new_order.user_id:
         try:
-            customer_msg = f"✅ Ваше замовлення **{new_order.order_number}** успішно оформлено!\n\n" \
-                           f"💰 Сума до оплати: **{new_order.total_price} грн**\n" \
+            customer_msg = f"✅ Ваше замовлення <b>{new_order.order_number}</b> успішно оформлено!\n\n" \
+                           f"💰 Сума до оплати: <b>{new_order.total_price} грн</b>\n" \
                            f"Статус замовлення можна відстежувати у вашому профілі."
-            await bot.send_message(chat_id=new_order.user_id, text=customer_msg, parse_mode="Markdown")
+            import httpx
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                await client.post(
+                    f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage",
+                    json={"chat_id": new_order.user_id, "text": customer_msg, "parse_mode": "HTML"}
+                )
         except Exception as e:
             print(f"Failed to send customer notification: {e}")
     

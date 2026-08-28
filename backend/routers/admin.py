@@ -257,7 +257,7 @@ ALLOWED_STATUSES = {"NEW", "REVIEWED", "EDITED", "PACKING", "SHIPPED", "CONFIRME
 async def get_orders(
     status_filter: Optional[str] = None, 
     skip: int = 0, 
-    limit: int = 50, 
+    limit: int = 500, 
     db: AsyncSession = Depends(get_db)
 ):
     query = select(Order).options(selectinload(Order.items).selectinload(OrderItem.product)).order_by(Order.created_at.desc())
